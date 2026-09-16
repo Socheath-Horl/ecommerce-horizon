@@ -25,7 +25,7 @@
 - [x] Create `.gitignore` (Node.js, Express, Vite, Drizzle)
 
 ### 1.2 Backend — Express Project
-- [x] Initialize Node + TypeScript project in `backend/` (install `express`, `tsx`, `typescript`, `@types/express`, `@types/node`)
+- [x] Initialize Node + TypeScript project in `backend/` (install `express`, `tsx`, `typescript`, `@types/express`, `@types/node`) — runtime: **Node v24** (`@types/node` ^22 resolved by npm)
 - [x] Install `drizzle-orm`, `pg` + `@types/pg`, and `drizzle-kit` (dev)
 - [x] Install `jose` (verify JWTs signed by Zitadel's JWKS)
 - [x] Install `zod` (validation) and `dotenv`
