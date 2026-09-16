@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cart — Horizon Supply Co. (React prototype)</title>
+
+<!-- Prototype build: React 18 UMD + Tailwind CDN (layout only) + shadcn/ui via
+     the shadcn-html CDN (github.com/codylindley/shadcn-html). JSX is compiled
+     offline by esbuild into prototype-app.js (shared by both pages); there is NO
+     runtime Babel. Icons are inline lucide-style <svg> (see ICONS in
+     _src/prototype.jsx). Components (btn/badge/input/skeleton/sheet/pagination/
+     combobox) are the real shadcn classes + semantic tokens; the Vite build
+     replaces them with `npx shadcn add`. -->
+
+<!-- Layer priority: base < components. Must be declared BEFORE the shadcn links
+     (layer order follows first declaration in document order — later wins). -->
+<style>@layer base, components;</style>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/codylindley/shadcn-html@latest/dist/theme/default-semantic-tokens.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/codylindley/shadcn-html@latest/dist/components/button/button.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/codylindley/shadcn-html@latest/dist/components/badge/badge.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/codylindley/shadcn-html@latest/dist/components/input/input.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/codylindley/shadcn-html@latest/dist/components/skeleton/skeleton.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/codylindley/shadcn-html@latest/dist/components/sheet/sheet.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/codylindley/shadcn-html@latest/dist/components/dialog/dialog.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/codylindley/shadcn-html@latest/dist/components/dropdown/dropdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/codylindley/shadcn-html@latest/dist/components/combobox/combobox.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/codylindley/shadcn-html@latest/dist/components/breadcrumb/breadcrumb.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/codylindley/shadcn-html@latest/dist/components/pagination/pagination.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/codylindley/shadcn-html@latest/dist/components/radio/radio.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/codylindley/shadcn-html@latest/dist/components/separator/separator.css">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    // preflight is OFF: it outputs unlayered resets that override shadcn's
+    // @layer components (unlayered author CSS beats layered). A minimal reset
+    // lives in our own @layer base below, so shadcn components win over it.
+    corePlugins: { preflight: false },
+    theme: {
+      extend: {
+        fontFamily: {
+          display: ['"Iowan Old Style"', '"Charter"', 'Georgia', '"Times New Roman"', 'serif'],
+        },
+      },
+    },
+  };
+</script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+<style>
+  :root { --brand: #3A5A40; }      /* review fix 1 — proposal, confirm against photography */
+  .dark { --brand: #6AA97C; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+  .font-display { font-family: "Iowan Old Style", "Charter", Georgia, "Times New Roman", serif; }
+  .font-mono { font-family: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* Honest labeled placeholder for any image that fails to load — never a
+     broken-image icon. Real Wikimedia Commons photos (assets/img/, CC0/CC BY-SA)
+     to be swapped for MinIO seed assets in the React build. */
+  .ph { width: 100%; height: 100%; object-fit: cover; background-color: #f4f4f5; }
+  /* SimpleIcons fill color is set in the URL (dark glyph) — invert in dark mode. */
+  .dark .social-icon { filter: invert(1); }
+
+  /* Minimal reset replacing Tailwind's preflight (which is disabled so its
+     unlayered rules can't beat shadcn-html's @layer components). Stays in
+     @layer base → components layer always wins on surfaces/borders/type. */
+  @layer base {
+    *, ::before, ::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body { margin: 0; line-height: 1.5; }
+    img, svg, video { display: block; max-width: 100%; }
+    a { color: inherit; text-decoration: inherit; }
+    button { cursor: pointer; font: inherit; color: inherit; }
+    h1,h2,h3,h4,h5,h6,p,ul,ol,dl,dd,figure { margin: 0; }
+    ul, ol { padding: 0; list-style: none; }
+    fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+    input, select, optgroup, textarea { font: inherit; color: inherit; background: transparent; border: none; padding: 0; }
+  }
+
+  /* Account dropdown hugs the viewport's right edge instead of the trigger's
+     left (trigger sits at the far right of the header). Anchored browsers honor
+     anchor(right); the React toggle handler right-aligns with fixed coords for
+     the rest. Unlayered so it beats dropdown.css's @layer components. */
+  .dropdown-content { left: auto; right: anchor(right); }
+</style>
+</head>
+
+<body data-view="cart" class="bg-white text-zinc-900 dark:bg-[#09090B] dark:text-zinc-50 antialiased">
+
+<div id="root"></div>
+<script src="prototype-app.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# Node / deps
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Env & secrets — never commit real credentials
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Tests / coverage
+coverage/
