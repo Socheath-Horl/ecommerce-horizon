@@ -25,17 +25,17 @@
 - [x] Create `.gitignore` (Node.js, Express, Vite, Drizzle)
 
 ### 1.2 Backend — Express Project
-- [ ] Initialize Node + TypeScript project in `backend/` (install `express`, `tsx`, `typescript`, `@types/express`, `@types/node`)
-- [ ] Install `drizzle-orm`, `pg` + `@types/pg`, and `drizzle-kit` (dev)
-- [ ] Install `jose` (verify JWTs signed by Zitadel's JWKS)
-- [ ] Install `zod` (validation) and `dotenv`
-- [ ] Install `cors`
-- [ ] Install `minio`, `multer` + `@types/multer`
-- [ ] Install `swagger-jsdoc`, `swagger-ui-express` + `@types/swagger-jsdoc`, `@types/swagger-ui-express` (OpenAPI, §1.5.5)
-- [ ] Configure scripts in `package.json` (`dev` = `tsx watch`, `build` = `tsc`, `db:generate`, `db:migrate`, `db:seed`, `db:push`)
-- [ ] Create `.env` + `.env.example` with all environment variables
-- [ ] Bootstrap Express app in `src/index.ts` (dotenv, `cors`, JSON body, `/api` prefix, 404 + error middleware)
-- [ ] Verify: `npm run build` compiles
+- [x] Initialize Node + TypeScript project in `backend/` (install `express`, `tsx`, `typescript`, `@types/express`, `@types/node`)
+- [x] Install `drizzle-orm`, `pg` + `@types/pg`, and `drizzle-kit` (dev)
+- [x] Install `jose` (verify JWTs signed by Zitadel's JWKS)
+- [x] Install `zod` (validation) and `dotenv`
+- [x] Install `cors`
+- [x] Install `minio`, `multer` + `@types/multer`
+- [x] Install `swagger-jsdoc`, `swagger-ui-express` + `@types/swagger-jsdoc`, `@types/swagger-ui-express` (OpenAPI, §1.5.5)
+- [x] Configure scripts in `package.json` (`dev` = `tsx watch`, `build` = `tsc`, `db:generate`, `db:migrate`, `db:seed`, `db:push`)
+- [x] Create `.env` + `.env.example` with all environment variables
+- [x] Bootstrap Express app in `src/index.ts` (dotenv, `cors`, JSON body, `/api` prefix, 404 + error middleware)
+- [x] Verify: `npm run build` compiles
 
 ### 1.3 Backend — Drizzle Setup
 - [ ] Create `drizzle.config.ts` (dialect `postgresql`, `schema: "./src/db/schema.ts"`, `out: "./drizzle"`, `DATABASE_URL` from env)
