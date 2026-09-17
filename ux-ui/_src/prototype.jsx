@@ -161,12 +161,19 @@ function Stars({ value, className }) {
 
 function StarPicker({ value, onChange }) {
   return (
-    <div className="mt-1.5 flex gap-1">
+    <div className="mt-1.5 flex gap-1.5">
       {[1, 2, 3, 4, 5].map((n) => (
         <button key={n} type="button" aria-label={n + ' star' + (n > 1 ? 's' : '')}
-                onClick={() => onChange(n)}
-                className={cn('text-2xl leading-none transition-transform hover:scale-110 focus:outline-none',
-                               n <= value ? 'text-amber-500 dark:text-amber-400' : 'text-zinc-300 dark:text-zinc-700')}>★</button>
+                onClick={() => onChange(n)} aria-pressed={n <= value}
+                className={cn('cursor-pointer rounded-md border-0 bg-transparent p-1 transition-transform hover:scale-110 focus:outline-none',
+                              'hover:bg-zinc-100 dark:hover:bg-zinc-800')}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+               fill={n <= value ? 'currentColor' : 'none'}
+               stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+               className={cn('h-7 w-7', n <= value ? 'text-amber-500 dark:text-amber-400' : 'text-zinc-300 dark:text-zinc-700')}>
+            <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" />
+          </svg>
+        </button>
       ))}
     </div>
   );
@@ -260,7 +267,7 @@ function ProductDetailView({ onAddToCart }) {
   }
 
   const oos = p.stock === 0;
-  const catLink = './products-page.html?categoryId=' + p.cat;
+  const catLink = './products-page.html?category_id=' + p.cat;
   const views = [p.img, ...(p.gallery || [])].slice(0, 4);
   const related = PRODUCTS.filter((x) => x.slug !== p.slug)
     .sort((a, b) => (b.cat === p.cat ? 1 : 0) - (a.cat === p.cat ? 1 : 0))
@@ -576,9 +583,9 @@ function FilterControls({ f, set, closeDrawer, group = 'cat' }) {
 function ProductsView() {
   const params = new URLSearchParams(location.search);
   const [f, setF] = useState(() => ({
-    cat: params.get('categoryId') || 'all',
-    min: params.get('minPrice') ? parseFloat(params.get('minPrice')) : null,
-    max: params.get('maxPrice') ? parseFloat(params.get('maxPrice')) : null,
+    cat: params.get('category_id') || 'all',
+min: params.get('min_price') ? parseFloat(params.get('min_price')) : null,
+    max: params.get('max_price') ? parseFloat(params.get('max_price')) : null,
     rating: params.get('rating') ? parseFloat(params.get('rating')) : null,
   }));
   const set = (patch) => setF((prev) => ({ ...prev, ...patch }));
@@ -595,9 +602,9 @@ function ProductsView() {
   // Query sync: URL params drive state (spec §5.4)
   useEffect(() => {
     const p = new URLSearchParams();
-    if (f.cat !== 'all') p.set('categoryId', f.cat);
-    if (f.min != null) p.set('minPrice', f.min);
-    if (f.max != null) p.set('maxPrice', f.max);
+    if (f.cat !== 'all') p.set('category_id', f.cat);
+if (f.min != null) p.set('min_price', f.min);
+    if (f.max != null) p.set('max_price', f.max);
     if (f.rating != null) p.set('rating', f.rating);
     if (sort !== 'newest') p.set('sort', sort);
     history.replaceState(null, '', baseUrl + (p.toString() ? '?' + p.toString() : ''));
@@ -753,7 +760,7 @@ function HomeView() {
         <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Shop by Category</h2>
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {CATS.map((c) => (
-            <a key={c.id} href={'./products-page.html?categoryId=' + c.id} className="group rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:shadow-md transition-shadow">
+            <a key={c.id} href={'./products-page.html?category_id=' + c.id} className="group rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:shadow-md transition-shadow">
               <div className="aspect-square overflow-hidden">
                 <img src={c.img} data-ph={c.label} alt={c.label} onError={fallback(c.label)} loading="lazy" className="ph transition-transform duration-300 group-hover:scale-105" />
               </div>
@@ -919,8 +926,8 @@ function Footer() {
 }
 
 const INITIAL_CART = [
-  { key: 'waxed-field-jacket', name: 'Waxed Field Jacket', img: 'assets/img/waxed-jacket-a.jpg', price: 189.00, qty: 2 },
-{ key: 'weekender-duffel',   name: 'Weekender Duffel',   img: 'assets/img/duffel-a.jpg',       price: 168.00, qty: 1 },
+  { key: 'waxed-field-jacket', name: 'Waxed Field Jacket', img: 'assets/img/waxed-jacket-a.jpg', price: 189.00, quantity: 2 },
+{ key: 'weekender-duffel',   name: 'Weekender Duffel',   img: 'assets/img/duffel-a.jpg',       price: 168.00, quantity: 1 },
 ];
 
 // ---- Sheet — shadcn slide-in panel on a native <dialog class="sheet">.
@@ -950,10 +957,10 @@ function Sheet({ side = 'right', open, onClose, className, children, ...rest }) 
 
 function CartDrawer({ open, onClose, lines, setLines }) {
   const changeQty = (key, delta) => setLines((ls) =>
-    ls.map((l) => l.key === key ? { ...l, qty: Math.max(1, l.qty + delta) } : l));
+    ls.map((l) => l.key === key ? { ...l, quantity: Math.max(1, l.quantity + delta) } : l));
   const remove = (key) => setLines((ls) => ls.filter((l) => l.key !== key));
-  const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
-  const count = lines.reduce((s, l) => s + l.qty, 0);
+  const sub_total = lines.reduce((s, l) => s + l.price * l.quantity, 0);
+  const count = lines.reduce((s, l) => s + l.quantity, 0);
 return (
     <Sheet side="right" className="w-full max-w-[420px]" open={open} onClose={onClose} aria-label="Cart">
       <div className="sheet-content flex h-full flex-col">
@@ -982,15 +989,15 @@ return (
                 </div>
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <div className="inline-flex items-center rounded-full border border-zinc-300 dark:border-zinc-700">
-                    <Button variant="icon" className="h-8 w-8" aria-label="Decrease quantity" disabled={l.qty <= 1} onClick={() => changeQty(l.key, -1)}>
+                    <Button variant="icon" className="h-8 w-8" aria-label="Decrease quantity" disabled={l.quantity <= 1} onClick={() => changeQty(l.key, -1)}>
                       <Icon name="minus" className="h-4 w-4" />
                     </Button>
-                    <span className="w-6 text-center text-sm font-medium">{l.qty}</span>
+                    <span className="w-6 text-center text-sm font-medium">{l.quantity}</span>
                     <Button variant="icon" className="h-8 w-8" aria-label="Increase quantity" onClick={() => changeQty(l.key, 1)}>
                       <Icon name="plus" className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="text-sm font-semibold">{fmtMoney(l.price * l.qty)}</p>
+                  <p className="text-sm font-semibold">{fmtMoney(l.price * l.quantity)}</p>
                 </div>
               </div>
             </div>
@@ -999,7 +1006,7 @@ return (
         <div className="mt-4 shrink-0 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-zinc-500 dark:text-zinc-400">Subtotal</span>
-            <span className="font-semibold">{fmtMoney(subtotal)}</span>
+            <span className="font-semibold">{fmtMoney(sub_total)}</span>
           </div>
           <a href="./checkout-page.html" data-variant="default" className="btn w-full" onClick={onClose}>Checkout</a>
           <a href="./cart-page.html" data-variant="outline" className="btn w-full" onClick={onClose}>View Cart</a>
@@ -1010,10 +1017,10 @@ return (
 }
 
 const CART_PRICING = (lines) => {
-  const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
-  const shipping = subtotal >= 100 ? 0 : 5;
-  const tax = subtotal * 0.0825;
-  return { subtotal, shipping, tax, total: subtotal + shipping + tax };
+  const sub_total = lines.reduce((s, l) => s + l.price * l.quantity, 0);
+  const shipping = sub_total >= 100 ? 0 : 5;
+  const tax = sub_total * 0.0825;
+  return { sub_total, shipping, tax, total: sub_total + shipping + tax };
 };
 
 function Modal({ open, onClose, title, description, children }) {
@@ -1059,11 +1066,11 @@ function ConfirmDialog({ open, onClose, onConfirm, title, description, confirmLa
 
 function CartView({ lines, setLines }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const setQty = (key, qty) => setLines((ls) => ls.map((l) => l.key === key ? { ...l, qty } : l));
+  const setQty = (key, qty) => setLines((ls) => ls.map((l) => l.key === key ? { ...l, quantity: qty } : l));
   const remove = (key) => setLines((ls) => ls.filter((l) => l.key !== key));
   const maxOf = (key) => (PRODUCTS.find((p) => p.slug === key) || { stock: 99 }).stock;
-  const count = lines.reduce((s, l) => s + l.qty, 0);
-  const { subtotal, shipping, tax, total } = CART_PRICING(lines);
+  const count = lines.reduce((s, l) => s + l.quantity, 0);
+  const { sub_total, shipping, tax, total } = CART_PRICING(lines);
 
   return (
     <div className="mx-auto max-w-7xl px-4 pt-8 pb-16">
@@ -1114,8 +1121,8 @@ function CartView({ lines, setLines }) {
                     </div>
                     <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{fmtMoney(l.price)} each</p>
                     <div className="mt-3 flex items-center justify-between gap-2">
-                      <Stepper value={l.qty} max={maxOf(l.key)} onChange={(n) => setQty(l.key, n)} />
-                      <p className="text-sm font-semibold tabular-nums">{fmtMoney(l.price * l.qty)}</p>
+                      <Stepper value={l.quantity} max={maxOf(l.key)} onChange={(n) => setQty(l.key, n)} />
+                      <p className="text-sm font-semibold tabular-nums">{fmtMoney(l.price * l.quantity)}</p>
                     </div>
                   </div>
                 </div>
@@ -1130,7 +1137,7 @@ function CartView({ lines, setLines }) {
                 <dl className="space-y-3 text-sm">
                   <div className="flex items-center justify-between">
                     <dt className="text-zinc-500 dark:text-zinc-400">Subtotal</dt>
-                    <dd className="font-medium tabular-nums">{fmtMoney(subtotal)}</dd>
+                    <dd className="font-medium tabular-nums">{fmtMoney(sub_total)}</dd>
                   </div>
                   <div className="flex items-center justify-between">
                     <dt className="text-zinc-500 dark:text-zinc-400">Shipping</dt>
@@ -1369,8 +1376,8 @@ function CheckoutSteps({ step }) {
 }
 
 function CheckoutView({ lines }) {
-  const count = lines.reduce((s, l) => s + l.qty, 0);
-  const { subtotal, shipping, tax, total } = CART_PRICING(lines);
+  const count = lines.reduce((s, l) => s + l.quantity, 0);
+  const { sub_total, shipping, tax, total } = CART_PRICING(lines);
   const [step, setStep] = useState(1);
   const [addr, setAddr] = useState({
     label: 'Home (default)', new: false, default: true,
@@ -1457,9 +1464,9 @@ function CheckoutView({ lines }) {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">{l.name}</span>
-                      <span className="block text-xs text-zinc-500 dark:text-zinc-400">Qty {l.qty}</span>
+                      <span className="block text-xs text-zinc-500 dark:text-zinc-400">Qty {l.quantity}</span>
                     </span>
-                    <span className="text-sm font-semibold tabular-nums">{fmtMoney(l.price * l.qty)}</span>
+                    <span className="text-sm font-semibold tabular-nums">{fmtMoney(l.price * l.quantity)}</span>
                   </li>
                 ))}
               </ul>
@@ -1467,7 +1474,7 @@ function CheckoutView({ lines }) {
               <dl className="space-y-3 text-sm">
                 <div className="flex items-center justify-between">
                   <dt className="text-zinc-500 dark:text-zinc-400">Subtotal</dt>
-                  <dd className="font-medium tabular-nums">{fmtMoney(subtotal)}</dd>
+                  <dd className="font-medium tabular-nums">{fmtMoney(sub_total)}</dd>
                 </div>
                 <div className="flex items-center justify-between">
                   <dt className="text-zinc-500 dark:text-zinc-400">Shipping</dt>
@@ -1497,8 +1504,8 @@ function OrderSuccessView() {
   const [resolving, setResolving] = useState(true);
   const orderNo = (() => { try { return new URLSearchParams(window.location.search).get('session_id') || 'ord_' + Date.now().toString(36); } catch (e) { return 'ord_' + Date.now().toString(36); } })();
   useEffect(() => { const t = window.setTimeout(() => setResolving(false), 1400); return () => window.clearTimeout(t); }, []);
-  const { subtotal, shipping, tax, total } = CART_PRICING(INITIAL_CART);
-  const count = INITIAL_CART.reduce((s, l) => s + l.qty, 0);
+  const { sub_total, shipping, tax, total } = CART_PRICING(INITIAL_CART);
+  const count = INITIAL_CART.reduce((s, l) => s + l.quantity, 0);
 
   const breadcrumb = (
     <nav className="breadcrumb" aria-label="Breadcrumb">
@@ -1546,9 +1553,9 @@ function OrderSuccessView() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{l.name}</span>
-                  <span className="block text-xs text-zinc-500 dark:text-zinc-400">Qty {l.qty}</span>
+                  <span className="block text-xs text-zinc-500 dark:text-zinc-400">Qty {l.quantity}</span>
                 </span>
-                <span className="text-sm font-semibold tabular-nums">{fmtMoney(l.price * l.qty)}</span>
+                <span className="text-sm font-semibold tabular-nums">{fmtMoney(l.price * l.quantity)}</span>
               </li>
             ))}
           </ul>
@@ -1558,7 +1565,7 @@ function OrderSuccessView() {
           <dl className="space-y-2 text-sm">
             <div className="flex items-center justify-between">
               <dt className="text-zinc-500 dark:text-zinc-400">Subtotal</dt>
-              <dd className="font-medium tabular-nums">{fmtMoney(subtotal)}</dd>
+              <dd className="font-medium tabular-nums">{fmtMoney(sub_total)}</dd>
             </div>
             <div className="flex items-center justify-between">
               <dt className="text-zinc-500 dark:text-zinc-400">Shipping</dt>
@@ -1605,23 +1612,23 @@ function OrderStatusBadge({ status }) {
 const ORDERS = [
   { id: '10f2c8ab-4d5f-4b7f-a9a0-3d4e5f6a7b8c', date: '2026-08-15', status: 'PAID',
     addr: { name: 'Jane Doe', line: '123 Harbor Ave, Portland, OR 97205, US' },
-    lines: [{ key: 'waxed-field-jacket', name: 'Waxed Field Jacket', img: 'assets/img/waxed-jacket-a.jpg', price: 189.00, qty: 2 },
-            { key: 'weekender-duffel',   name: 'Weekender Duffel',   img: 'assets/img/duffel-a.jpg',       price: 168.00, qty: 1 }] },
+    lines: [{ key: 'waxed-field-jacket', name: 'Waxed Field Jacket', img: 'assets/img/waxed-jacket-a.jpg', price: 189.00, quantity: 2 },
+            { key: 'weekender-duffel',   name: 'Weekender Duffel',   img: 'assets/img/duffel-a.jpg',       price: 168.00, quantity: 1 }] },
   { id: '9ae12fcd-7e8a-4c2b-a1d2-3f4a5b6c7d8e', date: '2026-08-12', status: 'SHIPPED',
     addr: { name: 'Jane Doe', line: '123 Harbor Ave, Portland, OR 97205, US' },
-    lines: [{ key: 'trail-mug', name: 'Trail Mug', img: 'assets/img/mug-a.jpg', price: 42.00, qty: 2 }] },
+    lines: [{ key: 'trail-mug', name: 'Trail Mug', img: 'assets/img/mug-a.jpg', price: 42.00, quantity: 2 }] },
   { id: '2b11ad0a-1c2d-4e5f-8a9b-0c1d2e3f4a5b', date: '2026-07-30', status: 'DELIVERED',
     addr: { name: 'Jane Doe', line: '123 Harbor Ave, Portland, OR 97205, US' },
-    lines: [{ key: 'daypack', name: 'Daypack', img: 'assets/img/daypack-a.jpg', price: 8.95, qty: 1, reviewed: true }] },
+    lines: [{ key: 'daypack', name: 'Daypack', img: 'assets/img/daypack-a.jpg', price: 8.95, quantity: 1, reviewed: true }] },
   { id: '77ee0415-6a7b-8c9d-0e1f-2a3b4c5d6e7f', date: '2026-07-18', status: 'DELIVERED',
     addr: { name: 'Jane Doe', line: '123 Harbor Ave, Portland, OR 97205, US' },
-    lines: [{ key: 'steel-bottle', name: 'Steel Bottle 1L', img: 'assets/img/bottle-b.jpg', price: 28.00, qty: 2 }] },
+    lines: [{ key: 'steel-bottle', name: 'Steel Bottle 1L', img: 'assets/img/bottle-b.jpg', price: 28.00, quantity: 2 }] },
   { id: 'c3d905f2-3a4b-5c6d-7e8f-9a0b1c2d3e4f', date: '2026-06-25', status: 'PENDING',
     addr: { name: 'Jane Doe', line: '123 Harbor Ave, Portland, OR 97205, US' },
-    lines: [{ key: 'insulated-bottle', name: 'Insulated Bottle 750ml', img: 'assets/img/bottle-a.jpg', price: 34.00, qty: 1 }] },
+    lines: [{ key: 'insulated-bottle', name: 'Insulated Bottle 750ml', img: 'assets/img/bottle-a.jpg', price: 34.00, quantity: 1 }] },
   { id: 'e8ab34c7-5f6a-7b8c-9d0e-1f2a3b4c5d6e', date: '2026-06-03', status: 'CANCELLED',
     addr: { name: 'Jane Doe', line: '400 Industry Rd, Portland, OR 97210, US' },
-    lines: [{ key: 'utility-backpack', name: 'Utility Backpack', img: 'assets/img/daypack-b.jpg', price: 98.00, qty: 1 }] },
+    lines: [{ key: 'utility-backpack', name: 'Utility Backpack', img: 'assets/img/daypack-b.jpg', price: 98.00, quantity: 1 }] },
 ];
 const ORDER_STATUSES = ['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
 const PAGE_SIZE = 4;
@@ -1674,7 +1681,7 @@ function OrdersView() {
       ) : (
         <div className="mt-6 space-y-4">
           {shown.map((o) => (
-            <a key={o.id} href={'./order-detail-page.html?orderId=' + o.id}
+            <a key={o.id} href={'./order-detail-page.html?order_id=' + o.id}
                className="card block bg-[var(--card)] transition-colors hover:border-zinc-400 dark:hover:border-zinc-600">
               <div className="card-content p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1684,7 +1691,7 @@ function OrdersView() {
                     <OrderStatusBadge status={o.status} />
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-sm text-zinc-500 dark:text-zinc-400">{o.lines.reduce((s, l) => s + l.qty, 0)} items</span>
+                    <span className="text-sm text-zinc-500 dark:text-zinc-400">{o.lines.reduce((s, l) => s + l.quantity, 0)} items</span>
                     <span className="text-sm font-semibold tabular-nums">{fmtMoney(CART_PRICING(o.lines).total)}</span>
                     <Icon name="chevron-right" className="h-5 w-5 text-zinc-400 dark:text-zinc-600" />
                   </div>
@@ -1721,10 +1728,10 @@ function OrdersView() {
 }
 
 function OrderDetailView() {
-  const orderId = (() => { try { return new URLSearchParams(window.location.search).get('orderId') || ORDERS[0].id; } catch (e) { return ORDERS[0].id; } })();
-  const order = ORDERS.find((o) => o.id === orderId) || ORDERS[0];
-  const { subtotal, shipping, tax, total } = CART_PRICING(order.lines);
-  const count = order.lines.reduce((s, l) => s + l.qty, 0);
+  const order_id = (() => { try { return new URLSearchParams(window.location.search).get('order_id') || ORDERS[0].id; } catch (e) { return ORDERS[0].id; } })();
+  const order = ORDERS.find((o) => o.id === order_id) || ORDERS[0];
+  const { sub_total, shipping, tax, total } = CART_PRICING(order.lines);
+  const count = order.lines.reduce((s, l) => s + l.quantity, 0);
 
   return (
     <div className="mx-auto max-w-7xl px-4 pt-8 pb-16">
@@ -1760,9 +1767,9 @@ function OrderDetailView() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
                         <a href={'./product-detail-page.html?slug=' + l.key} className="text-sm font-medium hover:underline">{l.name}</a>
-                        <span className="text-sm font-semibold tabular-nums">{fmtMoney(l.price * l.qty)}</span>
+                        <span className="text-sm font-semibold tabular-nums">{fmtMoney(l.price * l.quantity)}</span>
                       </div>
-                      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{fmtMoney(l.price)} each × {l.qty}</p>
+                      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{fmtMoney(l.price)} each × {l.quantity}</p>
                       {order.status === 'DELIVERED' && (
                         l.reviewed
                           ? <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
@@ -1807,7 +1814,7 @@ function OrderDetailView() {
               <dl className="space-y-3 text-sm">
                 <div className="flex items-center justify-between">
                   <dt className="text-zinc-500 dark:text-zinc-400">Subtotal</dt>
-                  <dd className="font-medium tabular-nums">{fmtMoney(subtotal)}</dd>
+                  <dd className="font-medium tabular-nums">{fmtMoney(sub_total)}</dd>
                 </div>
                 <div className="flex items-center justify-between">
                   <dt className="text-zinc-500 dark:text-zinc-400">Shipping</dt>
@@ -2197,7 +2204,7 @@ function AdminShell({ title, section, children, dark, onTheme }) {
             </div>
           </div>
         </header>
-        <main className="mx-auto max-w-[1400px] px-4 py-6 lg:px-8">{children}</main>
+        <main className="px-4 py-6 lg:px-8">{children}</main>
       </div>
     </div>
   );
@@ -2538,7 +2545,7 @@ function AdminOrdersView() {
                     : <OrderStatusBadge status={o.status} />}
                 </td>
                 <td className="table-cell text-right whitespace-nowrap">
-                  <a href={'./order-detail-page.html?orderId=' + o.id} className="btn" data-variant="outline" data-size="sm">Details</a>
+                  <a href={'./order-detail-page.html?order_id=' + o.id} className="btn" data-variant="outline" data-size="sm">Details</a>
                 </td>
               </tr>
             ))}
@@ -2818,12 +2825,12 @@ function App() {
 const [cartOpen, setCartOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [lines, setLines] = useState(INITIAL_CART);
-  const cartCount = lines.reduce((s, l) => s + l.qty, 0);
+  const cartCount = lines.reduce((s, l) => s + l.quantity, 0);
   const addToCart = (p, qty) => {
     setLines((ls) => {
       const found = ls.find((l) => l.key === p.slug);
-      if (found) return ls.map((l) => l.key === p.slug ? { ...l, qty: l.qty + qty } : l);
-      return [...ls, { key: p.slug, name: p.name, img: p.img, price: p.price, qty }];
+      if (found) return ls.map((l) => l.key === p.slug ? { ...l, quantity: l.quantity + qty } : l);
+      return [...ls, { key: p.slug, name: p.name, img: p.img, price: p.price, quantity: qty }];
     });
     toast('Added to cart');
   };

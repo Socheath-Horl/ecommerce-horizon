@@ -10,7 +10,7 @@
 
 - **Serve the app:** `npm run dev` bound to `0.0.0.0` (or `preview` of a production build) with `VITE_API_URL` set so the app can reach the backend; use Vite's `server.proxy` (`'/api' -> http://localhost:3000`) so all API calls are same-origin (the backend CORS allows only `http://localhost:5173`).
 - **Render check:** `docker run --rm --add-host=host.docker.internal:host-gateway lightpanda/browser:latest /bin/lightpanda fetch http://host.docker.internal:<port>/<path> --dump html` — assert the rendered DOM markers, not just HTTP 200.
-- **Flow check (click-through):** a PandaScript run via `/bin/lightpanda run /script.js` using `new Page()` + `page.goto/fill/click` and `page.waitForScript`/`page.evaluate`, asserting client flows — Zitadel sign-in redirect, PKCE callback round-trip, routing, protected redirects.
+- **Flow check (click-through):** a PandaScript run via `/bin/lightpanda run /script.js` using `new Page()` + `page.goto/fill/click` and `page.wait_for_script`/`page.evaluate`, asserting client flows — Zitadel sign-in redirect, PKCE callback round-trip, routing, protected redirects.
 - Every frontend `Verify:` bullet below ("loads / works / redirected / responsive") is performed this way and read from Lightpanda's dumped DOM/output.
 
 ## Phase 1: Project Setup, DB Schema, Auth + Password, MinIO
@@ -38,27 +38,27 @@
 - [x] Verify: `npm run build` compiles
 
 ### 1.3 Backend — Drizzle Setup
-- [ ] Create `drizzle.config.ts` (dialect `postgresql`, `schema: "./src/db/schema.ts"`, `out: "./drizzle"`, `DATABASE_URL` from env)
-- [ ] Define `users` table in `src/db/schema.ts` (`id = text` PK = **Zitadel `sub`**, NO password column, `role` pgEnum, timestamps)
-- [ ] Define `categories` table
-- [ ] Define `products` table (incl. `Decimal` price → `numeric`)
-- [ ] Define `files` table (`entityType` + `entityId` polymorphic association)
-- [ ] Create pool + drizzle client (`src/db/index.ts`: `pg.Pool` + `drizzle(pool, { schema })`, export `db`)
-- [ ] Generate + apply initial migration (`npm run db:generate` → `npm run db:migrate`)
-- [ ] Verify: tables exist in PostgreSQL (`npx drizzle-kit check` / psql `\dt`)
+- [x] Create `drizzle.config.ts` (dialect `postgresql`, `schema: "./src/db/schema.ts"`, `out: "./drizzle"`, `DATABASE_URL` from env)
+- [x] Define `users` table in `src/db/schema.ts` (`id = text` PK = **Zitadel `sub`**, NO password column, `role` pgEnum, timestamps)
+- [x] Define `categories` table
+- [x] Define `products` table (incl. `Decimal` price → `numeric`)
+- [x] Define `files` table (`entity_type` + `entity_id` polymorphic association)
+- [x] Create pool + drizzle client (`src/db/index.ts`: `pg.Pool` + `drizzle(pool, { schema })`, export `db`)
+- [x] Generate + apply initial migration (`npm run db:generate` → `npm run db:migrate`)
+- [x] Verify: tables exist in PostgreSQL (`npx drizzle-kit check` / psql `\dt`)
 
 ### 1.4 Backend — DB Client (Drizzle)
 - [ ] Create the shared drizzle client wrapper (`src/db/index.ts`) exporting one `db` instance + all `schema` tables for services to import
 - [ ] Verify: `npm run build` compiles
 
 ### 1.5 Backend — Seed File
-- [ ] Add `isFeatured boolean default(false)` to `products` in `src/db/schema.ts` (Home "Featured Products" needs it) — included in the initial migration
+- [ ] Add `is_featured boolean default(false)` to `products` in `src/db/schema.ts` (Home "Featured Products" needs it) — included in the initial migration
 - [ ] Install `tsx` (dev) as the script runner
 - [ ] Add seed script to `package.json` (`db:seed` → `tsx src/db/seed.ts`)
 - [ ] Create `src/db/seed.ts` — idempotent by slug/email (`onConflictDoNothing`) so re-seeding never duplicates
 - [ ] Ensure the admin identity exists in **Zitadel** (console or self-registration); the seed only records admin's `sub`:**role = ADMIN` for the known admin email (`onConflictDoUpdate` on users.email) — bcrypt is gone, the app never stores passwords
 - [ ] Seed sample categories (brand = Horizon Supply Co. — match `ux-ui/`): Outerwear, Travel, Carry & Desk, Drinkware
-- [ ] Seed sample products per category (use the SKUs from `ux-ui/`: FLT-04 Field Jacket, WKD-09 Weekender Duffel, FLK-24 Stainless Flask, FGT-02 Flight Tote, DSR-01 Desk Roll, ZPL-L4 Zip Pouch, TMB-16 Tumbler, MRN-HV Merino Crew — all `isFeatured`)
+- [ ] Seed sample products per category (use the SKUs from `ux-ui/`: FLT-04 Field Jacket, WKD-09 Weekender Duffel, FLK-24 Stainless Flask, FGT-02 Flight Tote, DSR-01 Desk Roll, ZPL-L4 Zip Pouch, TMB-16 Tumbler, MRN-HV Merino Crew — all `is_featured`)
 - [ ] Run seed (`npm run db:seed`)
 - [ ] Verify: data check (categories = 4, products = 8, admin = ADMIN)
 
@@ -67,7 +67,7 @@
 - [ ] Configure OpenAPI spec generation (definitions route → `src/utils/openapi.ts`) and serve raw JSON at `/api-json`
 - [ ] Serve Scalar UI at `/api/docs` pointing at the spec
 - [ ] Add a shared component `$ref` for the `{ success, data, message }` response envelope and the `{ success, error: { code, message, details } }` error body
-- [ ] Annotate each route with `@swagger` JSDoc (method, path, `security: [{ bearerAuth: [] }]`, body/param schema, success + error responses)
+- [ ] Annotate each route with `@swagger` JSDoc (method, path, `security: [{ bearer_auth: [] }]`, body/param schema, success + error responses)
 - [ ] Verify: `npm run build` + `GET /api/docs` renders the interactive UI
 
 ### 1.6 Backend — Auth Structure (Zitadel OIDC)
@@ -83,24 +83,24 @@
 
 ### 1.8 Backend — Token Validation Middleware (Zitadel JWKS)
 - [ ] Create `src/utils/oidc.ts` — fetch Zitadel `.well-known/openid-configuration`, cache `jwks_uri`, build `createRemoteJWKSet(keys)` with `jose`
-- [ ] Create `requireAuth` middleware (`src/middleware/auth.ts`): verify `Authorization: Bearer <token>` with `jwtVerify` (+ `issuer`, `audience` = `ZITADEL_CLIENT_ID`), attach `req.user` = `{ id, email, name }` from claims (`id` = `sub`); else `401 UNAUTHORIZED`
-- [ ] Create `requireRole(...roles)` middleware factory — looks up `req.user.role` in DB against allowed roles; else `403 FORBIDDEN`
+- [ ] Create `require_auth` middleware (`src/middleware/auth.ts`): verify `Authorization: Bearer <token>` with `jwtVerify` (+ `issuer`, `audience` = `ZITADEL_CLIENT_ID`), attach `req.user` = `{ id, email, name }` from claims (`id` = `sub`); else `401 UNAUTHORIZED`
+- [ ] Create `require_role(...roles)` middleware factory — looks up `req.user.role` in DB against allowed roles; else `403 FORBIDDEN`
 - [ ] Verify: `npm run build` compiles
 
 ### 1.9 Backend — Route Protection
-- [ ] Apply `requireAuth` to protected routes (cart, orders, profile, files)
-- [ ] Apply `requireRole('USER', 'ADMIN')` to admin portal routes; `requireRole('ADMIN')` to user management (§2.3)
+- [ ] Apply `require_auth` to protected routes (cart, orders, profile, files)
+- [ ] Apply `require_role('USER', 'ADMIN')` to admin portal routes; `require_role('ADMIN')` to user management (§2.3)
 - [ ] Verify: `npm run build` compiles
 
 ### 1.10 Backend — OIDC Config Endpoint
-- [ ] Implement `getConfig()` in AuthService — returns issuer, clientId, redirectUri, scopes, endSessionUri (from env + cached discovery) so the SPA never hardcodes OIDC settings
+- [ ] Implement `get_config()` in AuthService — returns issuer, client_id, redirect_uri, scopes, end_session_uri (from env + cached discovery) so the SPA never hardcodes OIDC settings
 - [ ] Add GET `/api/auth/config` route in `auth.routes.ts` (public)
 - [ ] OpenAPI: `@swagger` JSDoc on GET /api/auth/config (200 success with the data payload)
 - [ ] Verify: `GET /api/auth/config` returns the SPA settings; complete a browser sign-in round-trip (authorize redirect → Zitadel → code exchange → /users/me)
 
 ### 1.11 Backend — Logout Endpoint
-- [ ] Implement `logout()` in AuthService — stateless: validate the session exists (`requireAuth`), return OK
-- [ ] Add POST `/api/auth/logout` route in `auth.routes.ts` (`requireAuth`-protected)
+- [ ] Implement `logout()` in AuthService — stateless: validate the session exists (`require_auth`), return OK
+- [ ] Add POST `/api/auth/logout` route in `auth.routes.ts` (`require_auth`-protected)
 - [ ] OpenAPI: `@swagger` JSDoc on POST /api/auth/logout (bearer security, 200, 401)
 - [ ] Verify: Logout returns 200; the SPA then clears storage and redirects to Zitadel's `end_session` endpoint (system-design §3.1)
 
@@ -114,24 +114,24 @@
 - [ ] Verify: password reset works in Zitadel's end-user UI only
 
 ### 1.14 Backend — Profile Endpoint (lazy user upsert)
-- [ ] Implement `getProfile()` in AuthService — upsert `users` from verified token claims on first contact: `id = sub`, `email`/`name` from claims, `role = CUSTOMER` default
+- [ ] Implement `get_profile()` in AuthService — upsert `users` from verified token claims on first contact: `id = sub`, `email`/`name` from claims, `role = CUSTOMER` default
 - [ ] Return current user data (id, name, email, phone, avatar, role, addresses)
-- [ ] Add GET `/api/users/me` route in `src/modules/users/users.routes.ts` (per system-design §3.8; `requireAuth`, uses `req.user`)
+- [ ] Add GET `/api/users/me` route in `src/modules/users/users.routes.ts` (per system-design §3.8; `require_auth`, uses `req.user`)
 - [ ] OpenAPI: `@swagger` JSDoc on GET /api/users/me (bearer security, 200, 401)
 - [ ] Verify: Profile returns current user data; a brand-new Zitadel user gets a `users` row (role CUSTOMER)
 
 ### 1.15 Backend — Auth Error Handling
-- [ ] Return 401 for missing/invalid/expired Zitadel access token (requireAuth)
-- [ ] Return 403 for insufficient role (requireRole)
+- [ ] Return 401 for missing/invalid/expired Zitadel access token (require_auth)
+- [ ] Return 403 for insufficient role (require_role)
 - [ ] Add the global error-handling middleware (`src/middleware/error.ts`) that shapes every error as `{ success: false, error: { code, message, details } }` (404 fallback included)
 - [ ] Verify: All auth error cases return correct status codes
 
 ### 1.16 Backend — MinIO Service
 - [ ] Create MinIO client + service (`src/services/minio.service.ts`, `minio` client from env config)
 - [ ] Ensure bucket + public-read policy on startup
-- [ ] Implement `uploadFile(buffer, meta)` → object key + URL
-- [ ] Implement `deleteFile(bucket, key)`
-- [ ] Implement `generateUrl(bucket, key)`
+- [ ] Implement `upload_file(buffer, meta)` → object key + URL
+- [ ] Implement `delete_file(bucket, key)`
+- [ ] Implement `generate_url(bucket, key)`
 - [ ] Verify: MinIO connection works (check MinIO console)
 
 ### 1.17 Backend — Files Structure
@@ -150,7 +150,7 @@
 
 ### 1.19 Backend — File List Endpoint
 - [ ] Implement GET `/api/files` endpoint
-- [ ] Filter by entityType and entityId in query
+- [ ] Filter by entity_type and entity_id in query
 - [ ] Return list of files
 - [ ] OpenAPI: `@swagger` JSDoc on GET /api/files (query params, 200)
 - [ ] Verify: List files for an entity
@@ -164,7 +164,7 @@
 
 ### 1.21 Backend — File Link/Unlink Endpoints
 - [ ] Implement PUT `/api/files/:id/link` endpoint (PUT per dev preference)
-- [ ] Link file to entity (entityType + entityId)
+- [ ] Link file to entity (entity_type + entity_id)
 - [ ] Implement PUT `/api/files/:id/unlink` endpoint (PUT per dev preference)
 - [ ] Unlink file from entity
 - [ ] OpenAPI: `@swagger` JSDoc on PUT /api/files/:id/link|unlink (body schema, 200)
@@ -180,14 +180,14 @@
 - [ ] Initialize shadcn/ui
 - [ ] Add shadcn/ui components: button, input, card, label
 - [ ] Set up token CSS (globals.css) from `ux-ui/brand-spec.md` (OKLCH zinc values, light + dark) and `ux-ui/shadcn-component-library.html` slot-bridge table
-- [ ] Set up theme strategy: `darkMode: ['class']`, `html.dark` class, persisted `ui.theme` in localStorage, first load follows `prefers-color-scheme`
+- [ ] Set up theme strategy: `dark_mode: ['class']`, `html.dark` class, persisted `ui.theme` in localStorage, first load follows `prefers-color-scheme`
 - [ ] Verify: `npm run build` compiles
 
 ### 1.23 Frontend — Redux Store
 - [ ] Create store (`src/store/index.ts`)
-- [ ] Create auth slice (`src/store/slices/authSlice.ts`)
-- [ ] Add user, tokens, isAuthenticated to auth state
-- [ ] Add login, logout, setTokens actions
+- [ ] Create auth slice (`src/store/slices/auth_slice.ts`)
+- [ ] Add user, tokens, is_authenticated to auth state
+- [ ] Add login, logout, set_tokens actions
 - [ ] Configure localStorage persistence for refresh token
 - [ ] Wrap app with Redux Provider in `main.tsx`
 - [ ] Verify: `npm run build` compiles
@@ -206,15 +206,15 @@
 - [ ] Verify: `npm run build` compiles, routes work
 
 ### 1.26 Frontend — Auth API (RTK Query)
-- [ ] Create authApi (`src/services/authApi.ts`)
-- [ ] Add `getAuthConfig` query (issuer, clientId, redirectUri, scopes, endSessionUri)
+- [ ] Create auth_api (`src/services/auth_api.ts`)
+- [ ] Add `get_auth_config` query (issuer, client_id, redirect_uri, scopes, end_session_uri)
 - [ ] Add `logout` mutation
-- [ ] Add `getProfile` query (GET `/api/users/me`)
+- [ ] Add `get_profile` query (GET `/api/users/me`)
 - [ ] Configure base URL and headers
 - [ ] Verify: `npm run build` compiles
 
 ### 1.27 Frontend — Zitadel Sign-In Flow (replaces Login page)
-- [ ] Create OIDC helper (`src/lib/oidc.ts`) — fetch `/api/auth/config`, generate `pkceVerifier` + `code_challenge` (S256 via Web Crypto), build the Zitadel authorize URL with state+nonce (stored in sessionStorage)
+- [ ] Create OIDC helper (`src/lib/oidc.ts`) — fetch `/api/auth/config`, generate `pkce_verifier` + `code_challenge` (S256 via Web Crypto), build the Zitadel authorize URL with state+nonce (stored in sessionStorage)
 - [ ] Create `LoginPage` (`src/pages/auth/Login.tsx`) — renders `ux-ui/login-page.html` layout; one primary button that redirects to Zitadel (no password form, no local credential handling)
 - [ ] Redirect to `/` if already authenticated (short-circuit on boot)
 - [ ] Verify: Lightpanda — unauthenticated `/auth/login` shows a redirect; authenticated user lands on `/`
@@ -252,28 +252,28 @@
 - [ ] Verify: `npm run build` compiles
 
 ### 2.2 Backend — Users Validation (zod)
-- [ ] Create `updateRoleSchema` (role: ADMIN | USER | CUSTOMER)
+- [ ] Create `update_role_schema` (role: ADMIN | USER | CUSTOMER)
 - [ ] Add query schema for `GET /api/admin/users` (page, limit, search, role)
 - [ ] Create response types (`AdminUserListItem` with `_count.orders`, `AdminUser`, `ListUsersResponse`)
 - [ ] Verify: `npm run build` compiles
 
 ### 2.3 Backend — Admin List Users Endpoint
-- [ ] Implement `findAll()` in UsersService
+- [ ] Implement `find_all()` in UsersService
 - [ ] Add pagination support (page, limit)
 - [ ] Add search by name/email
 - [ ] Add filter by role
 - [ ] Return users with total count and order count
-- [ ] Add GET `/api/admin/users` route (ADMIN only, `requireRole('ADMIN')` + `validate(querySchema, 'query')`)
+- [ ] Add GET `/api/admin/users` route (ADMIN only, `require_role('ADMIN')` + `validate(query_schema, 'query')`)
 - [ ] OpenAPI: `@swagger` JSDoc on GET /api/admin/users (bearer security, 200, 403)
 - [ ] Verify: Admin can list users
 
 ### 2.4 Backend — Admin Update Role Endpoint
-- [ ] Implement `updateRole()` in UsersService
+- [ ] Implement `update_role()` in UsersService
 - [ ] Validate role is valid enum value (CUSTOMER | USER | ADMIN)
 - [ ] Prevent self-role change
 - [ ] Add PUT `/api/admin/users/:id/role` route (ADMIN only)
-- [ ] Apply `requireRole('ADMIN')`
-- [ ] OpenAPI: `@swagger` JSDoc on PUT /api/admin/users/:id/role (bearer security, body `updateRoleSchema`, 200, 400, 401, 403, 404)
+- [ ] Apply `require_role('ADMIN')`
+- [ ] OpenAPI: `@swagger` JSDoc on PUT /api/admin/users/:id/role (bearer security, body `update_role_schema`, 200, 400, 401, 403, 404)
 - [ ] Verify: Admin can change user role
 
 ### 2.5 Backend — Admin User Error Handling
@@ -284,9 +284,9 @@
 - [ ] Verify: All error cases handled
 
 ### 2.6 Frontend — Admin API (RTK Query)
-- [ ] Create adminApi (`src/services/adminApi.ts`)
-- [ ] Add getUsers query (with pagination)
-- [ ] Add updateUserRole mutation
+- [ ] Create admin_api (`src/services/admin_api.ts`)
+- [ ] Add get_users query (with pagination)
+- [ ] Add update_user_role mutation
 - [ ] Verify: `npm run build` compiles
 
 ### 2.7 Frontend — Auth Guard Component
@@ -327,13 +327,13 @@
 - [ ] Create RoleSelector (`src/components/admin/RoleSelector.tsx`)
 - [ ] Show current role
 - [ ] Dropdown to select new role
-- [ ] Call updateUserRole on change
+- [ ] Call update_user_role on change
 - [ ] Show success/error feedback
 - [ ] Verify: `npm run build` compiles
 
 ### 2.13 Frontend — User List Page
 - [ ] Create UserList page (`src/pages/admin/users/UserList.tsx`)
-- [ ] Fetch users with adminApi
+- [ ] Fetch users with admin_api
 - [ ] Display UserTable
 - [ ] Add pagination controls
 - [ ] Verify: `npm run build` compiles
@@ -366,8 +366,8 @@
 - [ ] Verify: `npm run build` compiles
 
 ### 3.2 Backend — Categories Validation (zod)
-- [ ] Create `createCategorySchema` (name, fileId?) — per `system-design.md` §3.2 (no description/parentId on Category)
-- [ ] Create `updateCategorySchema` (name?, fileId?)
+- [ ] Create `create_category_schema` (name, file_id?) — per `system-design.md` §3.2 (no description/parent_id on Category)
+- [ ] Create `update_category_schema` (name?, file_id?)
 - [ ] Apply via `validate(schema)` middleware
 - [ ] Verify: `npm run build` compiles
 
@@ -381,12 +381,12 @@
 - [ ] Implement `create()` in CategoriesService
 - [ ] Auto-generate slug from name
 - [ ] Check for duplicate name
-- [ ] Add POST `/api/categories` route (admin only, `requireRole('USER', 'ADMIN')`)
-- [ ] OpenAPI: `@swagger` JSDoc on POST /api/categories (bearer security, body `createCategorySchema`, 201, 400, 401, 403, 404, 409)
+- [ ] Add POST `/api/categories` route (admin only, `require_role('USER', 'ADMIN')`)
+- [ ] OpenAPI: `@swagger` JSDoc on POST /api/categories (bearer security, body `create_category_schema`, 201, 400, 401, 403, 404, 409)
 - [ ] Verify: Admin can create category
 
 ### 3.5 Backend — List Categories Endpoint
-- [ ] Implement `findAll()` in CategoriesService
+- [ ] Implement `find_all()` in CategoriesService
 - [ ] Return all categories (public)
 - [ ] Add GET `/api/categories` route
 - [ ] OpenAPI: `@swagger` JSDoc on GET /api/categories (200)
@@ -396,15 +396,15 @@
 - [ ] Implement `update()` in CategoriesService
 - [ ] Check category exists
 - [ ] Update slug if name changes
-- [ ] Add PATCH `/api/categories/:id` route (admin only, `requireRole('USER', 'ADMIN')`)
-- [ ] OpenAPI: `@swagger` JSDoc on PATCH /api/categories/:id (bearer security, body `updateCategorySchema`, 200, 400, 401, 403, 404, 409)
+- [ ] Add PATCH `/api/categories/:id` route (admin only, `require_role('USER', 'ADMIN')`)
+- [ ] OpenAPI: `@swagger` JSDoc on PATCH /api/categories/:id (bearer security, body `update_category_schema`, 200, 400, 401, 403, 404, 409)
 - [ ] Verify: Admin can update category
 
 ### 3.7 Backend — Delete Category Endpoint
 - [ ] Implement `remove()` in CategoriesService
 - [ ] Check for products in category
 - [ ] Prevent delete if products exist
-- [ ] Add DELETE `/api/categories/:id` route (admin only, `requireRole('USER', 'ADMIN')`)
+- [ ] Add DELETE `/api/categories/:id` route (admin only, `require_role('USER', 'ADMIN')`)
 - [ ] OpenAPI: `@swagger` JSDoc on DELETE /api/categories/:id (bearer security, 200, 401, 403, 404, 409)
 - [ ] Verify: Admin can delete category (if no products)
 
@@ -415,20 +415,20 @@
 - [ ] Verify: `npm run build` compiles
 
 ### 3.9 Backend — Products Validation (zod)
-- [ ] Create `createProductSchema` (name, description, price, categoryId, stock, imageIds? ≤ 5)
-- [ ] Create `updateProductSchema` (all optional)
-- [ ] Create `queryProductsSchema` (page, limit, search, categoryId, minPrice, maxPrice, rating, sort)
+- [ ] Create `create_product_schema` (name, description, price, category_id, stock, image_ids? ≤ 5)
+- [ ] Create `update_product_schema` (all optional)
+- [ ] Create `query_products_schema` (page, limit, search, category_id, min_price, max_price, rating, sort)
 - [ ] Apply via `validate(schema)` middleware (body vs query)
 - [ ] Verify: `npm run build` compiles
 
 ### 3.10 Backend — Pagination Utility
 - [ ] Create pagination helper (`src/utils/pagination.ts`)
 - [ ] Accept page, limit params
-- [ ] Return `{ page, limit, offset, totalPages }` values
+- [ ] Return `{ page, limit, offset, total_pages }` values
 - [ ] Verify: `npm run build` compiles
 
 ### 3.11 Backend — ProductImage Table
-- [ ] Add `productImages` table to `src/db/schema.ts` (productId, fileId, order, unique `(productId, fileId)`, cascade on product delete)
+- [ ] Add `product_images` table to `src/db/schema.ts` (product_id, file_id, order, unique `(product_id, file_id)`, cascade on product delete)
 - [ ] Add relations to `products` and `files`
 - [ ] Regenerate migration (`npm run db:generate`)
 - [ ] Verify: `npm run db:migrate` applies the new table (psql `\dt`)
@@ -438,22 +438,22 @@
 - [ ] Auto-generate slug from name
 - [ ] Validate category exists
 - [ ] Create product in database
-- [ ] Add POST `/api/products` route (admin only, `requireRole('USER', 'ADMIN')`)
-- [ ] OpenAPI: `@swagger` JSDoc on POST /api/products (bearer security, body `createProductSchema`, 201, 400, 401, 403, 404, 409)
+- [ ] Add POST `/api/products` route (admin only, `require_role('USER', 'ADMIN')`)
+- [ ] OpenAPI: `@swagger` JSDoc on POST /api/products (bearer security, body `create_product_schema`, 201, 400, 401, 403, 404, 409)
 - [ ] Verify: Admin can create product
 
 ### 3.13 Backend — List Products Endpoint
-- [ ] Implement `findAll()` in ProductsService
+- [ ] Implement `find_all()` in ProductsService
 - [ ] Add pagination (page, limit)
-- [ ] Add filtering (search, categoryId, minPrice, maxPrice)
+- [ ] Add filtering (search, category_id, min_price, max_price)
 - [ ] Add sorting (price_asc, price_desc, newest, popular)
 - [ ] Include category and images in response
-- [ ] Add GET `/api/products` route (public, `validate(queryProductsSchema, 'query')`)
+- [ ] Add GET `/api/products` route (public, `validate(query_products_schema, 'query')`)
 - [ ] OpenAPI: `@swagger` JSDoc on GET /api/products (200 + pagination payload)
 - [ ] Verify: Products list with filters works
 
 ### 3.14 Backend — Get Product Endpoint
-- [ ] Implement `findBySlug()` in ProductsService
+- [ ] Implement `find_by_slug()` in ProductsService
 - [ ] Include category and images
 - [ ] Add GET `/api/products/:slug` route (public)
 - [ ] OpenAPI: `@swagger` JSDoc on GET /api/products/:slug (path param slug, 200, 404)
@@ -464,8 +464,8 @@
 - [ ] Check product exists
 - [ ] Validate category exists (if changing)
 - [ ] Update slug if name changes
-- [ ] Add PATCH `/api/products/:id` route (admin only, `requireRole('USER', 'ADMIN')`)
-- [ ] OpenAPI: `@swagger` JSDoc on PATCH /api/products/:id (bearer security, body `updateProductSchema`, 200, 400, 401, 403, 404)
+- [ ] Add PATCH `/api/products/:id` route (admin only, `require_role('USER', 'ADMIN')`)
+- [ ] OpenAPI: `@swagger` JSDoc on PATCH /api/products/:id (bearer security, body `update_product_schema`, 200, 400, 401, 403, 404)
 - [ ] Verify: Admin can update product
 
 ### 3.16 Backend — Delete Product Endpoint
@@ -473,7 +473,7 @@
 - [ ] Check product exists
 - [ ] Delete product images from MinIO
 - [ ] Delete product from database
-- [ ] Add DELETE `/api/products/:id` route (admin only, `requireRole('USER', 'ADMIN')`)
+- [ ] Add DELETE `/api/products/:id` route (admin only, `require_role('USER', 'ADMIN')`)
 - [ ] OpenAPI: `@swagger` JSDoc on DELETE /api/products/:id (bearer security, 200, 401, 403, 404)
 - [ ] Verify: Admin can delete product
 
@@ -485,14 +485,14 @@
 - [ ] Verify: All error cases handled
 
 ### 3.18 Frontend — Products API (RTK Query)
-- [ ] Create productsApi (`src/services/productsApi.ts`)
-- [ ] Add getProducts query (with filters)
-- [ ] Add getProduct query (by slug)
+- [ ] Create products_api (`src/services/products_api.ts`)
+- [ ] Add get_products query (with filters)
+- [ ] Add get_product query (by slug)
 - [ ] Verify: `npm run build` compiles
 
 ### 3.19 Frontend — Categories API (RTK Query)
-- [ ] Create categoriesApi (`src/services/categoriesApi.ts`)
-- [ ] Add getCategories query
+- [ ] Create categories_api (`src/services/categories_api.ts`)
+- [ ] Add get_categories query
 - [ ] Verify: `npm run build` compiles
 
 ### 3.20 Frontend — ProductCard Component
@@ -505,7 +505,7 @@
 
 ### 3.21 Frontend — FilterSidebar Component
 - [ ] Create FilterSidebar (`src/components/products/FilterSidebar.tsx`) — follow `ux-ui/products-page.html` (All/Outerwear/Travel/Carry & Desk/Drinkware)
-- [ ] Category filter (single-select radio, matches single `categoryId` param, count per category)
+- [ ] Category filter (single-select radio, matches single `category_id` param, count per category)
 - [ ] Price range filter (min/max inputs)
 - [ ] Clear filters button
 - [ ] Mobile (≤768px): collapse to slide-over filter drawer launching from "Filters" button
@@ -532,7 +532,7 @@
 
 ### 3.25 Frontend — Products Page
 - [ ] Create Products page (`src/pages/customer/Products.tsx`) — follow `ux-ui/products-page.html`
-- [ ] Fetch products with productsApi
+- [ ] Fetch products with products_api
 - [ ] Display product grid (ProductCard)
 - [ ] Add FilterSidebar (desktop sidebar 260px; mobile filter drawer)
 - [ ] Add SortSelect
@@ -555,15 +555,15 @@
 - [ ] Verify: Product detail page loads correctly (Lightpanda)
 
 ### 3.27 Frontend — Admin Product API (RTK Query)
-- [ ] Add createProduct mutation to adminApi
-- [ ] Add updateProduct mutation to adminApi
-- [ ] Add deleteProduct mutation to adminApi
+- [ ] Add create_product mutation to admin_api
+- [ ] Add update_product mutation to admin_api
+- [ ] Add delete_product mutation to admin_api
 - [ ] Verify: `npm run build` compiles
 
 ### 3.28 Frontend — Admin Category API (RTK Query)
-- [ ] Add createCategory mutation to adminApi
-- [ ] Add updateCategory mutation to adminApi
-- [ ] Add deleteCategory mutation to adminApi
+- [ ] Add create_category mutation to admin_api
+- [ ] Add update_category mutation to admin_api
+- [ ] Add delete_category mutation to admin_api
 - [ ] Verify: `npm run build` compiles
 
 ### 3.29 Frontend — Admin ProductTable Component
@@ -575,14 +575,14 @@
 
 ### 3.30 Frontend — Admin ProductList Page
 - [ ] Create ProductList page (`src/pages/admin/products/ProductList.tsx`)
-- [ ] Fetch products with adminApi
+- [ ] Fetch products with admin_api
 - [ ] Display ProductTable
 - [ ] Add "Create Product" button
 - [ ] Verify: `npm run build` compiles
 
 ### 3.31 Frontend — Admin ProductForm Page
 - [ ] Create ProductForm page (`src/pages/admin/products/ProductForm.tsx`)
-- [ ] Form fields: name, description, price, categoryId, stock
+- [ ] Form fields: name, description, price, category_id, stock
 - [ ] Image upload component
 - [ ] Submit to create/update API
 - [ ] Pre-fill form for edit mode
@@ -590,7 +590,7 @@
 
 ### 3.32 Frontend — Admin CategoryList Page
 - [ ] Create CategoryList page (`src/pages/admin/categories/CategoryList.tsx`)
-- [ ] Fetch categories with adminApi
+- [ ] Fetch categories with admin_api
 - [ ] Display category table
 - [ ] Add "Create Category" button
 - [ ] Verify: `npm run build` compiles
@@ -628,7 +628,7 @@
 - [ ] Verify: `npm run build` compiles
 
 ### 4.2 Backend — Image File Filter
-- [ ] Create multer `fileFilter` (`src/modules/files/middleware/imageFilter.ts`)
+- [ ] Create multer `file_filter` (`src/modules/files/middleware/image_filter.ts`)
 - [ ] Allow only image MIME types (jpg, jpeg, png, webp)
 - [ ] Reject non-image files
 - [ ] Verify: `npm run build` compiles
@@ -674,15 +674,15 @@
 - [ ] Verify: Invalid files rejected with clear error
 
 ### 4.8 Frontend — Files API (RTK Query)
-- [ ] Create filesApi (`src/services/filesApi.ts`)
-- [ ] Add uploadFile mutation
-- [ ] Add uploadMultiple mutation
-- [ ] Add getFiles query
-- [ ] Add deleteFile mutation
+- [ ] Create files_api (`src/services/files_api.ts`)
+- [ ] Add upload_file mutation
+- [ ] Add upload_multiple mutation
+- [ ] Add get_files query
+- [ ] Add delete_file mutation
 - [ ] Verify: `npm run build` compiles
 
-### 4.9 Frontend — useUpload Hook
-- [ ] Create useUpload hook (`src/hooks/useUpload.ts`)
+### 4.9 Frontend — use_upload Hook
+- [ ] Create use_upload hook (`src/hooks/use_upload.ts`)
 - [ ] Manage upload state (loading, progress, error)
 - [ ] Handle file selection
 - [ ] Handle upload to API
@@ -735,48 +735,48 @@
 - [ ] Verify: `npm run build` compiles
 
 ### 5.2 Backend — Cart Validation (zod)
-- [ ] Create `addToCartSchema` (productId, quantity ≥ 1)
-- [ ] Create `updateCartSchema` (quantity ≥ 1)
+- [ ] Create `add_to_cart_schema` (product_id, quantity ≥ 1)
+- [ ] Create `update_cart_schema` (quantity ≥ 1)
 - [ ] Apply via `validate(schema)` middleware
 - [ ] Verify: `npm run build` compiles
 
 ### 5.3 Backend — CartItem Table
-- [ ] Add `cartItems` table to `src/db/schema.ts` (userId, productId, quantity, unique `(userId, productId)`)
+- [ ] Add `cart_items` table to `src/db/schema.ts` (user_id, product_id, quantity, unique `(user_id, product_id)`)
 - [ ] Add relations to `users` and `products`
 - [ ] Regenerate migration (`npm run db:generate`)
 - [ ] Verify: `npm run db:migrate` applies the new table (psql `\dt`)
 
 ### 5.4 Backend — Add to Cart Endpoint
-- [ ] Implement `addToCart()` in CartService
+- [ ] Implement `add_to_cart()` in CartService
 - [ ] Check product exists and has stock
 - [ ] Check if item already in cart (increment quantity)
 - [ ] Create new cart item if not exists
-- [ ] Add POST `/api/cart` route (protected, `requireAuth`)
-- [ ] OpenAPI: `@swagger` JSDoc on POST /api/cart (bearer security, body `addToCartSchema`, 201, 400, 401, 404, 409)
+- [ ] Add POST `/api/cart` route (protected, `require_auth`)
+- [ ] OpenAPI: `@swagger` JSDoc on POST /api/cart (bearer security, body `add_to_cart_schema`, 201, 400, 401, 404, 409)
 - [ ] Verify: Add to cart works
 
 ### 5.5 Backend — Get Cart Endpoint
-- [ ] Implement `getCart()` in CartService
+- [ ] Implement `get_cart()` in CartService
 - [ ] Return cart items with product details
 - [ ] Calculate subtotal per item
 - [ ] Calculate total
-- [ ] Add GET `/api/cart` route (protected, `requireAuth`)
+- [ ] Add GET `/api/cart` route (protected, `require_auth`)
 - [ ] OpenAPI: `@swagger` JSDoc on GET /api/cart (bearer security, 200)
 - [ ] Verify: Get cart returns correct data
 
 ### 5.6 Backend — Update Cart Endpoint
-- [ ] Implement `updateCartItem()` in CartService
+- [ ] Implement `update_cart_item()` in CartService
 - [ ] Validate new quantity
 - [ ] Check stock availability
 - [ ] Update quantity
-- [ ] Add PATCH `/api/cart/:id` route (protected, `requireAuth`)
-- [ ] OpenAPI: `@swagger` JSDoc on PATCH /api/cart/:id (bearer security, body `updateCartSchema`, 200, 400, 401, 403, 404, 409)
+- [ ] Add PATCH `/api/cart/:id` route (protected, `require_auth`)
+- [ ] OpenAPI: `@swagger` JSDoc on PATCH /api/cart/:id (bearer security, body `update_cart_schema`, 200, 400, 401, 403, 404, 409)
 - [ ] Verify: Update quantity works
 
 ### 5.7 Backend — Remove from Cart Endpoint
-- [ ] Implement `removeFromCart()` in CartService
+- [ ] Implement `remove_from_cart()` in CartService
 - [ ] Delete cart item
-- [ ] Add DELETE `/api/cart/:id` route (protected, `requireAuth`)
+- [ ] Add DELETE `/api/cart/:id` route (protected, `require_auth`)
 - [ ] OpenAPI: `@swagger` JSDoc on DELETE /api/cart/:id (bearer security, 200, 401, 403, 404)
 - [ ] Verify: Remove from cart works
 
@@ -787,17 +787,17 @@
 - [ ] Verify: Stock validation works
 
 ### 5.9 Frontend — Cart API (RTK Query)
-- [ ] Create cartApi (`src/services/cartApi.ts`)
-- [ ] Add addToCart mutation
-- [ ] Add getCart query
-- [ ] Add updateCart mutation
-- [ ] Add removeFromCart mutation
+- [ ] Create cart_api (`src/services/cart_api.ts`)
+- [ ] Add add_to_cart mutation
+- [ ] Add get_cart query
+- [ ] Add update_cart mutation
+- [ ] Add remove_from_cart mutation
 - [ ] Verify: `npm run build` compiles
 
 ### 5.10 Frontend — Cart Slice
-- [ ] Create cart slice (`src/store/slices/cartSlice.ts`)
-- [ ] Add cartCount state
-- [ ] Add updateCartCount action
+- [ ] Create cart slice (`src/store/slices/cart_slice.ts`)
+- [ ] Add cart_count state
+- [ ] Add update_cart_count action
 - [ ] Sync with localStorage
 - [ ] Verify: `npm run build` compiles
 
@@ -830,7 +830,7 @@
 
 ### 5.14 Frontend — Cart Page
 - [ ] Create Cart page (`src/pages/customer/Cart.tsx`)
-- [ ] Fetch cart with cartApi
+- [ ] Fetch cart with cart_api
 - [ ] Display list of CartItems
 - [ ] Display OrderSummary
 - [ ] Empty cart message
@@ -872,11 +872,11 @@
 - [ ] Verify: `npm run build` compiles
 
 ### 6.2 Backend — Stripe Service
-- [ ] Implement `createCheckoutSession(orderId)` against an existing `PENDING` order (order-first: order was created first by `POST /api/orders`)
+- [ ] Implement `create_checkout_session(order_id)` against an existing `PENDING` order (order-first: order was created first by `POST /api/orders`)
 - [ ] Configure session from order fields (amount from order `total`, no cart re-derivation)
 - [ ] Configure success URL with `{CHECKOUT_SESSION_ID}` and cancel URL
-- [ ] Attach `orderId` to the session (client_reference_id/metadata)
-- [ ] Return `{ orderId, sessionId, url }`
+- [ ] Attach `order_id` to the session (client_reference_id/metadata)
+- [ ] Return `{ order_id, session_id, url }`
 - [ ] Verify: `npm run build` compiles
 
 ### 6.3 Backend — Checkout Structure
@@ -886,8 +886,8 @@
 - [ ] Verify: `npm run build` compiles
 
 ### 6.4 Backend — Order Tables
-- [ ] Add `orders` table to `src/db/schema.ts` (id, userId, status enum, total/shipping/tax `numeric`, stripeSessionId?, shippingAddress `jsonb`)
-- [ ] Add `orderItems` table (orderId, productId, quantity, price — price snapshot at creation)
+- [ ] Add `orders` table to `src/db/schema.ts` (id, user_id, status enum, total/shipping/tax `numeric`, stripe_session_id?, shipping_address `jsonb`)
+- [ ] Add `order_items` table (order_id, product_id, quantity, price — price snapshot at creation)
 - [ ] Add `payments` table
 - [ ] Add relations
 - [ ] Add shipping/tax `numeric` columns to orders (pricing rule: flat $5, free ≥$100; tax 8.25%; snapshot at creation)
@@ -895,10 +895,10 @@
 - [ ] Verify: `npm run db:migrate` applies the new tables (psql `\dt`)
 
 ### 6.5 Backend — Order-First Checkout
-- [ ] Implement `POST /api/orders` — creates order as `PENDING` from the user's cart, storing `shipping`, `tax`, `total`, `shippingAddress` (per `system-design.md` §3.4)
+- [ ] Implement `POST /api/orders` — creates order as `PENDING` from the user's cart, storing `shipping`, `tax`, `total`, `shipping_address` (per `system-design.md` §3.4)
 - [ ] Validate cart is not empty, items in stock before creating order
-- [ ] Implement `POST /api/checkout/create-session` — accepts `{ orderId }`, verifies order is the user's own `PENDING`, calls Stripe service, returns `data.url`
-- [ ] Add routes (protected, `requireAuth`)
+- [ ] Implement `POST /api/checkout/create-session` — accepts `{ order_id }`, verifies order is the user's own `PENDING`, calls Stripe service, returns `data.url`
+- [ ] Add routes (protected, `require_auth`)
 - [ ] OpenAPI: `@swagger` JSDoc on POST /api/orders + POST /api/checkout/create-session (bearer security, 201, 400, 401, 404, 409)
 - [ ] Verify: `POST /api/orders` + `create-session` produce a Stripe checkout URL
 
@@ -906,7 +906,7 @@
 - [ ] Implement webhook handler in `checkout.routes.ts`
 - [ ] Verify webhook signature
 - [ ] Handle `checkout.session.completed` event
-- [ ] Resolve the order via `orderId` (client_reference_id/metadata) — do **not** create a new order
+- [ ] Resolve the order via `order_id` (client_reference_id/metadata) — do **not** create a new order
 - [ ] Flip order status `PENDING → PAID`
 - [ ] Create payment record
 - [ ] Decrement product stock
@@ -923,9 +923,9 @@
 - [ ] Verify: Validation works
 
 ### 6.8 Frontend — Checkout API (RTK Query)
-- [ ] Create checkoutApi (`src/services/checkoutApi.ts`)
-- [ ] Add createOrder mutation (`POST /api/orders`)
-- [ ] Add createSession mutation (`POST /api/checkout/create-session`)
+- [ ] Create checkout_api (`src/services/checkout_api.ts`)
+- [ ] Add create_order mutation (`POST /api/orders`)
+- [ ] Add create_session mutation (`POST /api/checkout/create-session`)
 - [ ] Verify: `npm run build` compiles
 
 ### 6.9 Frontend — Card Redirect (Stripe Hosted Checkout)
@@ -936,7 +936,7 @@
 ### 6.10 Frontend — AddressForm Component
 - [ ] Create AddressForm (`src/components/checkout/AddressForm.tsx`)
 - [ ] Form fields: line1, line2 (optional), city, state, zip, country
-- [ ] Saved-address preselect (`label`, `isDefault`) + "+ New address"
+- [ ] Saved-address preselect (`label`, `is_default`) + "+ New address"
 - [ ] Form validation
 - [ ] Verify: `npm run build` compiles
 
@@ -961,7 +961,7 @@
 
 ### 6.14 Frontend — OrderConfirmation Page
 - [ ] Create OrderConfirmation page (`src/pages/customer/OrderConfirmation.tsx`)
-- [ ] Resolve the order via `?session_id` (+ `orderId` from create-session response) → `GET /api/orders/:id` (owner-gated)
+- [ ] Resolve the order via `?session_id` (+ `order_id` from create-session response) → `GET /api/orders/:id` (owner-gated)
 - [ ] Display success message
 - [ ] Display order number
 - [ ] Display order summary (authoritative snapshot: total, shipping, tax)
@@ -992,73 +992,73 @@
 - [ ] Verify: `npm run build` compiles
 
 ### 7.2 Backend — Orders Validation (zod)
-- [ ] Create `updateOrderStatusSchema` (status enum)
+- [ ] Create `update_order_status_schema` (status enum)
 - [ ] Apply via `validate(schema)` middleware
 - [ ] Verify: `npm run build` compiles
 
 ### 7.3 Backend — List Orders Endpoint
-- [ ] Implement `findAll()` in OrdersService
+- [ ] Implement `find_all()` in OrdersService
 - [ ] Filter by current user
 - [ ] Include order items
 - [ ] Add pagination
-- [ ] Add GET `/api/orders` route (protected, `requireAuth`)
+- [ ] Add GET `/api/orders` route (protected, `require_auth`)
 - [ ] OpenAPI: `@swagger` JSDoc on GET /api/orders (bearer security, 200)
 - [ ] Verify: User can list their orders
 
 ### 7.4 Backend — Get Order Endpoint
-- [ ] Implement `findOne()` in OrdersService
+- [ ] Implement `find_one()` in OrdersService
 - [ ] Include order items and payment
 - [ ] Verify user owns the order
-- [ ] Add GET `/api/orders/:id` route (protected, `requireAuth`)
+- [ ] Add GET `/api/orders/:id` route (protected, `require_auth`)
 - [ ] OpenAPI: `@swagger` JSDoc on GET /api/orders/:id (bearer security, 200, 401, 403, 404)
 - [ ] Verify: User can get order detail
 
 ### 7.5 Backend — Admin Update Order Status Endpoint
-- [ ] Implement `updateStatus()` in OrdersService
+- [ ] Implement `update_status()` in OrdersService
 - [ ] Validate status is valid enum
 - [ ] Enforce legal transitions (PENDING→PAID|CANCELLED, PAID→SHIPPED|CANCELLED, SHIPPED→DELIVERED|CANCELLED) — `400 Invalid status transition`
 - [ ] Update order status
-- [ ] Add PATCH `/api/admin/orders/:id/status` route (admin only, `requireRole('USER', 'ADMIN')`)
-- [ ] OpenAPI: `@swagger` JSDoc on PATCH /api/admin/orders/:id/status (bearer security, body `updateOrderStatusSchema`, 200, 400, 401, 403, 404)
+- [ ] Add PATCH `/api/admin/orders/:id/status` route (admin only, `require_role('USER', 'ADMIN')`)
+- [ ] OpenAPI: `@swagger` JSDoc on PATCH /api/admin/orders/:id/status (bearer security, body `update_order_status_schema`, 200, 400, 401, 403, 404)
 - [ ] Verify: Admin can update order status
 
 ### 7.6 Backend — Address Table
-- [ ] Add `addresses` table to `src/db/schema.ts` (userId, label, line1/line2, city, state, zip, country, isDefault)
+- [ ] Add `addresses` table to `src/db/schema.ts` (user_id, label, line1/line2, city, state, zip, country, is_default)
 - [ ] Add relation to `users`
 - [ ] Regenerate migration (`npm run db:generate`)
 - [ ] Verify: `npm run db:migrate` applies the new table (psql `\dt`)
 
 ### 7.7 Backend — Profile Endpoints
-- [ ] Implement `getProfile()` in UsersService
-- [ ] Implement `updateProfile()` in UsersService
-- [ ] Add GET `/api/users/me` route (protected, `requireAuth`)
-- [ ] Add PATCH `/api/users/me` route (protected, `requireAuth`)
+- [ ] Implement `get_profile()` in UsersService
+- [ ] Implement `update_profile()` in UsersService
+- [ ] Add GET `/api/users/me` route (protected, `require_auth`)
+- [ ] Add PATCH `/api/users/me` route (protected, `require_auth`)
 - [ ] OpenAPI: `@swagger` JSDoc on GET/PATCH /api/users/me (bearer security, 200, 400, 401, 404)
 - [ ] Verify: Profile get/update works
 
 ### 7.8 Backend — Address Endpoints
-- [ ] Implement `createAddress()` in UsersService
-- [ ] Implement `updateAddress()` in UsersService
-- [ ] Implement `deleteAddress()` in UsersService
-- [ ] Implement `getAddresses()` in UsersService
-- [ ] Add address routes (protected, `requireAuth`)
+- [ ] Implement `create_address()` in UsersService
+- [ ] Implement `update_address()` in UsersService
+- [ ] Implement `delete_address()` in UsersService
+- [ ] Implement `get_addresses()` in UsersService
+- [ ] Add address routes (protected, `require_auth`)
 - [ ] OpenAPI: `@swagger` JSDoc on /api/users/me/address CRUD (bearer security, 200/201, 400, 401, 403, 404)
 - [ ] Verify: Address CRUD works
 
 ### 7.9 Frontend — Orders API (RTK Query)
-- [ ] Create ordersApi (`src/services/ordersApi.ts`)
-- [ ] Add getOrders query
-- [ ] Add getOrder query
+- [ ] Create orders_api (`src/services/orders_api.ts`)
+- [ ] Add get_orders query
+- [ ] Add get_order query
 - [ ] Verify: `npm run build` compiles
 
 ### 7.10 Frontend — Users API (RTK Query)
-- [ ] Create usersApi (`src/services/usersApi.ts`)
-- [ ] Add getProfile query
-- [ ] Add updateProfile mutation
-- [ ] Add getAddresses query
-- [ ] Add createAddress mutation
-- [ ] Add updateAddress mutation
-- [ ] Add deleteAddress mutation
+- [ ] Create users_api (`src/services/users_api.ts`)
+- [ ] Add get_profile query
+- [ ] Add update_profile mutation
+- [ ] Add get_addresses query
+- [ ] Add create_address mutation
+- [ ] Add update_address mutation
+- [ ] Add delete_address mutation
 - [ ] Verify: `npm run build` compiles
 
 ### 7.11 Frontend — OrderStatusBadge Component
@@ -1082,7 +1082,7 @@
 
 ### 7.14 Frontend — Orders Page
 - [ ] Create Orders page (`src/pages/customer/Orders.tsx`)
-- [ ] Fetch orders with ordersApi
+- [ ] Fetch orders with orders_api
 - [ ] Display OrderList
 - [ ] Empty orders message
 - [ ] Verify: Orders page loads (Lightpanda)
@@ -1143,12 +1143,12 @@
 - [ ] Verify: `npm run build` compiles
 
 ### 8.2 Backend — Reviews Validation (zod)
-- [ ] Create `createReviewSchema` (rating 1–5, comment?, imageIds? ≤ 5)
+- [ ] Create `create_review_schema` (rating 1–5, comment?, image_ids? ≤ 5)
 - [ ] Add validation (rating 1-5, required fields)
 - [ ] Verify: `npm run build` compiles
 
 ### 8.3 Backend — ReviewImage Table
-- [ ] Add `reviewImages` table to `src/db/schema.ts` (reviewId, fileId, unique `(reviewId, fileId)`, cascade on review delete)
+- [ ] Add `review_images` table to `src/db/schema.ts` (review_id, file_id, unique `(review_id, file_id)`, cascade on review delete)
 - [ ] Add relations to `reviews` and `files`
 - [ ] Regenerate migration (`npm run db:generate`)
 - [ ] Verify: `npm run db:migrate` applies the new table (psql `\dt`)
@@ -1158,12 +1158,12 @@
 - [ ] Verify user purchased the product
 - [ ] Prevent duplicate reviews
 - [ ] Create review in database
-- [ ] Add POST `/api/products/:id/reviews` route (protected, `requireAuth`)
-- [ ] OpenAPI: `@swagger` JSDoc on POST /api/products/:id/reviews (bearer security, body `createReviewSchema`, 201, 400, 401, 403, 404, 409)
+- [ ] Add POST `/api/products/:id/reviews` route (protected, `require_auth`)
+- [ ] OpenAPI: `@swagger` JSDoc on POST /api/products/:id/reviews (bearer security, body `create_review_schema`, 201, 400, 401, 403, 404, 409)
 - [ ] Verify: Create review works
 
 ### 8.5 Backend — List Reviews Endpoint
-- [ ] Implement `findAll()` in ReviewsService
+- [ ] Implement `find_all()` in ReviewsService
 - [ ] Filter by product ID
 - [ ] Include images
 - [ ] Include user info (name only)
@@ -1176,7 +1176,7 @@
 - [ ] Verify user owns the review
 - [ ] Delete review images from MinIO
 - [ ] Delete review from database
-- [ ] Add DELETE `/api/reviews/:id` route (protected, `requireAuth`)
+- [ ] Add DELETE `/api/reviews/:id` route (protected, `require_auth`)
 - [ ] OpenAPI: `@swagger` JSDoc on DELETE /api/reviews/:id (bearer security, 200, 401, 403, 404)
 - [ ] Verify: Delete own review works
 
@@ -1187,10 +1187,10 @@
 - [ ] Verify: Validation works
 
 ### 8.8 Frontend — Reviews API (RTK Query)
-- [ ] Create reviewsApi (`src/services/reviewsApi.ts`)
-- [ ] Add getReviews query
-- [ ] Add createReview mutation
-- [ ] Add deleteReview mutation
+- [ ] Create reviews_api (`src/services/reviews_api.ts`)
+- [ ] Add get_reviews query
+- [ ] Add create_review mutation
+- [ ] Add delete_review mutation
 - [ ] Verify: `npm run build` compiles
 
 ### 8.9 Frontend — StarRating Component
@@ -1265,7 +1265,7 @@
 - [ ] Verify: `npm run build` compiles
 
 ### 9.2 Backend — Admin Stats Endpoint
-- [ ] Implement `getStats()` in AdminService
+- [ ] Implement `get_stats()` in AdminService
 - [ ] Count total users
 - [ ] Count total products
 - [ ] Count total orders
@@ -1275,34 +1275,34 @@
 - [ ] Count low stock products (stock <= 5)
 - [ ] Get recent orders (last 10)
 - [ ] Calculate sales by day (revenue per day)
-- [ ] Add GET `/api/admin/stats` route (admin only, `requireRole('USER', 'ADMIN')`)
+- [ ] Add GET `/api/admin/stats` route (admin only, `require_role('USER', 'ADMIN')`)
 - [ ] OpenAPI: `@swagger` JSDoc on GET /api/admin/stats (bearer security, 200, 403)
 - [ ] Verify: Stats endpoint returns all fields
 
 ### 9.3 Backend — Admin Orders Endpoint
-- [ ] Implement `getAllOrders()` in AdminService
+- [ ] Implement `get_all_orders()` in AdminService
 - [ ] Include user info
 - [ ] Include order items
 - [ ] Add pagination (page, limit)
-- [ ] Add filters: status, dateFrom, dateTo (ISO dates)
-- [ ] Add GET `/api/admin/orders` route (admin only, `requireRole('USER', 'ADMIN')`)
+- [ ] Add filters: status, date_from, date_to (ISO dates)
+- [ ] Add GET `/api/admin/orders` route (admin only, `require_role('USER', 'ADMIN')`)
 - [ ] OpenAPI: `@swagger` JSDoc on GET /api/admin/orders (bearer security, 200, 403)
 - [ ] Verify: Admin can list all orders with filters
 
 ### 9.4 Backend — Admin Products Endpoint
-- [ ] Implement `getAllProducts()` in AdminService
+- [ ] Implement `get_all_products()` in AdminService
 - [ ] Include category
 - [ ] Include images
 - [ ] Add pagination (page, limit)
-- [ ] Add filters: search (by name), categoryId, stock ("in_stock" | "out_of_stock" | "low")
-- [ ] Add GET `/api/admin/products` route (admin only, `requireRole('USER', 'ADMIN')`)
+- [ ] Add filters: search (by name), category_id, stock ("in_stock" | "out_of_stock" | "low")
+- [ ] Add GET `/api/admin/products` route (admin only, `require_role('USER', 'ADMIN')`)
 - [ ] OpenAPI: `@swagger` JSDoc on GET /api/admin/products (bearer security, 200, 403)
 - [ ] Verify: Admin can list all products with filters
 
 ### 9.5 Frontend — Admin API Updates
-- [ ] Add getStats query to adminApi
-- [ ] Add getAllOrders query to adminApi (with status, dateFrom, dateTo filters)
-- [ ] Add getAllProducts query to adminApi (with search, categoryId, stock filters)
+- [ ] Add get_stats query to admin_api
+- [ ] Add get_all_orders query to admin_api (with status, date_from, date_to filters)
+- [ ] Add get_all_products query to admin_api (with search, category_id, stock filters)
 - [ ] Verify: `npm run build` compiles
 
 ### 9.6 Frontend — StatsCards Component
@@ -1329,7 +1329,7 @@
 
 ### 9.9 Frontend — Dashboard Page
 - [ ] Create Dashboard page (`src/pages/admin/Dashboard.tsx`)
-- [ ] Fetch stats with adminApi
+- [ ] Fetch stats with admin_api
 - [ ] Display StatsCards
 - [ ] Display SalesChart
 - [ ] Display RecentOrders
@@ -1344,7 +1344,7 @@
 
 ### 9.11 Frontend — Admin OrderList Page
 - [ ] Create OrderList page (`src/pages/admin/orders/OrderList.tsx`)
-- [ ] Fetch orders with adminApi
+- [ ] Fetch orders with admin_api
 - [ ] Display OrderTable
 - [ ] Add pagination
 - [ ] Verify: Order list page loads (Lightpanda)
@@ -1352,7 +1352,7 @@
 ### 9.12 Frontend — Admin Order Status Update
 - [ ] Add status update to order detail
 - [ ] Dropdown for status selection
-- [ ] Call updateStatus API
+- [ ] Call update_status API
 - [ ] Verify: Status update works
 
 ### 9.13 Phase 9 — Full Verification

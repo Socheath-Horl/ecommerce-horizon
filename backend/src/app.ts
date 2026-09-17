@@ -3,9 +3,9 @@ import cors, { type CorsOptions } from 'cors';
 import express, { type ErrorRequestHandler } from 'express';
 import { StatusCodes } from 'http-status-codes';
 
-const apiPrefix = `/${process.env.API_PREFIX ?? 'api'}`;
+const api_prefix = `/${process.env.API_PREFIX ?? 'api'}`;
 
-const corsOptions: CorsOptions = {
+const cors_options: CorsOptions = {
   origin: (process.env.CORS_ORIGIN ?? 'http://localhost:5173')
     .split(',')
     .map((origin) => origin.trim())
@@ -14,21 +14,21 @@ const corsOptions: CorsOptions = {
 
 const app = express();
 
-app.use(cors(corsOptions));
+app.use(cors(cors_options));
 app.use(express.json());
 
-app.get(`${apiPrefix}/health`, (_req, res) => {
+app.get(`${api_prefix}/health`, (_req, res) => {
   res.json({ success: true, data: { status: 'ok' } });
 });
 
-const notFoundHandler: express.RequestHandler = (_req, res) => {
+const not_found_handler: express.RequestHandler = (_req, res) => {
   res.status(StatusCodes.NOT_FOUND).json({
     success: false,
     error: { code: 'NOT_FOUND', message: 'Route not found' },
   });
 };
 
-const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+const error_handler: ErrorRequestHandler = (err, _req, res, _next) => {
   console.error(err);
   res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
     success: false,
@@ -36,9 +36,9 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   });
 };
 
-app.use(notFoundHandler);
-app.use(errorHandler);
+app.use(not_found_handler);
+app.use(error_handler);
 
-export const appInfo = { apiPrefix };
+export const app_info = { api_prefix };
 
 export default app;

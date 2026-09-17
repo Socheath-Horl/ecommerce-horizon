@@ -20,15 +20,15 @@ GUEST → CUSTOMER → USER → ADMIN
 
 The storefront (spec + seed data) implements **Horizon Supply Co.** — an everyday-carry / outdoor-lifestyle goods store:
 - **Categories:** Outerwear (24), Travel (12), Carry & Desk (18), Drinkware (9) — 63 styles total.
-- **Slugs:** `outerwear`, `travel`, `carry-desk`, `drinkware` (URL string used by `GET /api/products?categoryId=` and the product-detail breadcrumb).
-- **Products** use SKU-style slugs (e.g. FLT-04 waxed field jacket, WKD-09 weekender duffel, FLK-24 stainless flask); `isFeatured` seeds ~8 featured items for the Home grid.
+- **Slugs:** `outerwear`, `travel`, `carry-desk`, `drinkware` (URL string used by `GET /api/products?category_id=` and the product-detail breadcrumb).
+- **Products** use SKU-style slugs (e.g. FLT-04 waxed field jacket, WKD-09 weekender duffel, FLK-24 stainless flask); `is_featured` seeds ~8 featured items for the Home grid.
 - Seed data and any admin UX copy use these names/values verbatim. Visual reference: `ux-ui/` HTML build (see `system-ui-design.md` §8).
 
 ---
 
 ## 2. Database Schema (Drizzle ORM)
 
-> Defined in `backend/src/db/schema.ts`. PostgreSQL database, `pg` driver + `drizzle-orm`. Primary keys are UUIDv4 (`crypto.randomUUID()` via `uuid().defaultRandom()`) **except `users.id`**, which stores the **Zitadel subject (`sub`)** directly — Zitadel creates it, not the app, so it has no `defaultRandom`. Every column that references a user (`orders.userId`, `cartItems.userId`, …) is therefore `text`, not `uuid`. Column names are **camelCase on purpose** — they mirror the JSON keys returned by the API (§3) 1:1. Enums are real Postgres enums via `pgEnum`. `updatedAt` is written by the app on every update (Drizzle has no `@updatedAt`).
+> Defined in `backend/src/db/schema.ts`. PostgreSQL database, `pg` driver + `drizzle-orm`. Primary keys are UUIDv4 (`crypto.randomUUID()` via `uuid().defaultRandom()`) **except `users.id`**, which stores the **Zitadel subject (`sub`)** directly — Zitadel creates it, not the app, so it has no `defaultRandom`. Every column that references a user (`orders.user_id`, `cart_items.user_id`, …) is therefore `text`, not `uuid`. Column prefixes that form compounds use **`snake_case`** (`first_name`, `created_at`) — they mirror the JSON keys returned by the API (§3) 1:1. Enums are real Postgres enums via `pgEnum`. `updated_at` is written by the app on every update (Drizzle has no `@updated_at`).
 
 ```typescript
 import { relations } from "drizzle-orm";
@@ -36,20 +36,38 @@ import {
   boolean, integer, jsonb, numeric, pgEnum, pgTable, text, timestamp, uuid,
 } from "drizzle-orm/pg-core";
 
-export const roleEnum = pgEnum("role", ["GUEST", "CUSTOMER", "USER", "ADMIN"]);
-export const orderStatusEnum = pgEnum("order_status", [
+export const role_enum = pgEnum("role", ["GUEST", "CUSTOMER", "USER", "ADMIN"]);
+export const order_status_enum = pgEnum("order_status", [
   "PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED",
 ]);
+
+// files before users — despite the bidirectional FK cycle (users.avatar_id ↔
+// files.user_id), `PgColumn`-annotated callbacks break TS circular inference so
+// BOTH sides stay real DB constraints.
+export const files = pgTable("files", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: text("user_id").references((): PgColumn => users.id),  // = Zitadel sub
+  original_name: text("original_name").notNull(),
+  file_name: text("file_name").notNull(),         // stored object name
+  mime_type: text("mime_type").notNull(),
+  size: integer("size").notNull(),
+  bucket: text("bucket").notNull(),               // "ecommerce"
+  key: text("key").notNull(),                     // MinIO object key
+  url: text("url").notNull(),
+  entity_type: text("entity_type"),               // "user" | "product" | "category" | "review"
+  entity_id: uuid("entity_id"),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+});
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),                 // Zitadel `sub` claim — no defaultRandom, Zitadel sets it
   email: text("email").notNull().unique(),     // from Zitadel profile claims on first login
   name: text("name").notNull(),                // from Zitadel profile claims on first login
-  role: roleEnum("role").notNull().default("CUSTOMER"),  // assigned in OUR admin portal, not Zitadel
-  avatarId: uuid("avatarId"),                  // FK → files.id
+  role: role_enum("role").notNull().default("CUSTOMER"),  // assigned in OUR admin portal, not Zitadel
+  avatar_id: uuid("avatar_id").references((): PgColumn => files.id),  // FK → files.id
   phone: text("phone"),
-  createdAt: timestamp("createdAt").notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt").notNull().defaultNow(),  // app sets on update
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),  // app sets on update
 });
 
 // No password column: identity + password live in Zitadel (self-hosted). The app
@@ -59,7 +77,7 @@ export const categories = pgTable("categories", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull().unique(),
   slug: text("slug").notNull().unique(),
-  imageId: uuid("imageId"),                    // FK → files.id
+  image_id: uuid("image_id").references(() => files.id),  // FK → files.id
 });
 
 export const products = pgTable("products", {
@@ -69,90 +87,75 @@ export const products = pgTable("products", {
   description: text("description").notNull(),
   price: numeric("price").notNull(),           // product price today (order items snapshot theirs)
   stock: integer("stock").notNull().default(0),
-  isFeatured: boolean("isFeatured").notNull().default(false),
-  categoryId: uuid("categoryId")
+  is_featured: boolean("is_featured").notNull().default(false),
+  category_id: uuid("category_id")
     .notNull()
     .references(() => categories.id),
-  createdAt: timestamp("createdAt").notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const productImages = pgTable(
+export const product_images = pgTable(
   "product_images",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    productId: uuid("productId")
+    product_id: uuid("product_id")
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
-    fileId: uuid("fileId")
+    file_id: uuid("file_id")
       .notNull()
       .references(() => files.id),
     order: integer("order").notNull().default(0),
   },
-  (t) => [t.index(["productId"]), t.unique(["productId", "fileId"])],
+  (t) => [t.index(["product_id"]), t.unique(["product_id", "file_id"])],
 );
 
-export const files = pgTable("files", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: text("userId").references(() => users.id),  // = Zitadel sub
-  originalName: text("originalName").notNull(),
-  fileName: text("fileName").notNull(),        // stored object name
-  mimeType: text("mimeType").notNull(),
-  size: integer("size").notNull(),
-  bucket: text("bucket").notNull(),            // "ecommerce"
-  key: text("key").notNull(),                  // MinIO object key
-  url: text("url").notNull(),
-  entityType: text("entityType"),              // "user" | "product" | "category" | "review"
-  entityId: uuid("entityId"),
-  createdAt: timestamp("createdAt").notNull().defaultNow(),
-});
-
-export const cartItems = pgTable(
+export const cart_items = pgTable(
   "cart_items",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: text("userId")
+    user_id: text("user_id")
       .notNull()
       .references(() => users.id),             // = Zitadel sub
-    productId: uuid("productId")
+    product_id: uuid("product_id")
       .notNull()
       .references(() => products.id),
     quantity: integer("quantity").notNull().default(1),
   },
-  (t) => [t.index(["userId"]), t.unique(["userId", "productId"])],
+  (t) => [t.index(["user_id"]), t.unique(["user_id", "product_id"])],
 );
 
 export const orders = pgTable("orders", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: text("userId")
+  user_id: text("user_id")
     .notNull()
     .references(() => users.id),             // = Zitadel sub
-  status: orderStatusEnum("status").notNull().default("PENDING"),
+  status: order_status_enum("status").notNull().default("PENDING"),
   total: numeric("total").notNull(),
   shipping: numeric("shipping").notNull(),     // snapshot at creation
   tax: numeric("tax").notNull(),               // snapshot at creation
-  stripeSessionId: text("stripeSessionId").unique(),
-  shippingAddress: jsonb("shippingAddress").notNull(),
-  createdAt: timestamp("createdAt").notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+  stripe_session_id: text("stripe_session_id").unique(),
+  shipping_address: jsonb("shipping_address").notNull(),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
 ```
 
 **Pricing rule (server-computed, never client-side)** — confirmed against the `ux-ui/` reference build (`cart-page.html` renders the same constants: `SHIP_FLAT = 5`, `SHIP_FREE_MIN = 100`, tax 8.25%):
-- `subtotal = Σ (OrderItem.price × quantity)`, where `price` is the **product price at order creation** (snapshot against future price changes; orders are never re-priced)
-- `shipping = $5.00` flat, **free when subtotal ≥ $100**
-- `tax = subtotal × 0.0825` (state rate, fixed for v1)
-- `total = subtotal + shipping + tax`
+- `sub_total = Σ (OrderItem.price × quantity)`, where `price` is the **product price at order creation** (snapshot against future price changes; orders are never re-priced)
+- `shipping = $5.00` flat, **free when sub_total ≥ $100**
+- `tax = sub_total × 0.0825` (state rate, fixed for v1)
+- `total = sub_total + shipping + tax`
 
 `Order.shipping`, `Order.tax`, and `Order.total` are written once at creation (`POST /api/orders`) and returned thereafter by every order-reading endpoint. `GET /api/cart` returns the same computation as live estimates so cart and checkout totals can render before the order exists.
 
 ```typescript
-export const orderItems = pgTable("order_items", {
+export const order_items = pgTable("order_items", {
   id: uuid("id").primaryKey().defaultRandom(),
-  orderId: uuid("orderId")
+  order_id: uuid("order_id")
     .notNull()
     .references(() => orders.id, { onDelete: "cascade" }),
-  productId: uuid("productId")
+  product_id: uuid("product_id")
     .notNull()
     .references(() => products.id),
   quantity: integer("quantity").notNull(),
@@ -161,52 +164,52 @@ export const orderItems = pgTable("order_items", {
 
 export const payments = pgTable("payments", {
   id: uuid("id").primaryKey().defaultRandom(),
-  orderId: uuid("orderId")
+  order_id: uuid("order_id")
     .notNull()
     .references(() => orders.id),
-  stripeId: text("stripeId").notNull().unique(),
+  stripe_id: text("stripe_id").notNull().unique(),
   amount: numeric("amount").notNull(),
   currency: text("currency").notNull().default("usd"),
-  cardBrand: text("cardBrand"),
-  cardLast4: text("cardLast4"),
+  card_brand: text("card_brand"),
+  card_last_4: text("card_last_4"),
   status: text("status").notNull(),            // "succeeded" etc.
-  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  created_at: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const reviews = pgTable(
   "reviews",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: text("userId")
+    user_id: text("user_id")
       .notNull()
       .references(() => users.id),             // = Zitadel sub
-    productId: uuid("productId")
+    product_id: uuid("product_id")
       .notNull()
       .references(() => products.id),
     rating: integer("rating").notNull(),       // 1-5
     comment: text("comment"),
-    createdAt: timestamp("createdAt").notNull().defaultNow(),
+    created_at: timestamp("created_at").notNull().defaultNow(),
   },
-  (t) => [t.index(["productId"]), t.unique(["userId", "productId"])],
+  (t) => [t.index(["product_id"]), t.unique(["user_id", "product_id"])],
 );
 
-export const reviewImages = pgTable(
+export const review_images = pgTable(
   "review_images",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    reviewId: uuid("reviewId")
+    review_id: uuid("review_id")
       .notNull()
       .references(() => reviews.id, { onDelete: "cascade" }),
-    fileId: uuid("fileId")
+    file_id: uuid("file_id")
       .notNull()
       .references(() => files.id),
   },
-  (t) => [t.index(["reviewId"]), t.unique(["reviewId", "fileId"])],
+  (t) => [t.index(["review_id"]), t.unique(["review_id", "file_id"])],
 );
 
 export const addresses = pgTable("addresses", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: text("userId")
+  user_id: text("user_id")
     .notNull()
     .references(() => users.id),             // = Zitadel sub
   label: text("label").notNull(),              // "Home", "Work", ...
@@ -216,61 +219,61 @@ export const addresses = pgTable("addresses", {
   state: text("state").notNull(),
   zip: text("zip").notNull(),
   country: text("country").notNull().default("US"),
-  isDefault: boolean("isDefault").notNull().default(false),
+  is_default: boolean("is_default").notNull().default(false),
 });
 
 // Relations (for `db.query.*` with `with: { ... }` joins)
-export const userRelations = relations(users, ({ one, many }) => ({
-  avatar: one(files, { fields: [users.avatarId], references: [files.id] }),
-  cartItems: many(cartItems),
+export const user_relations = relations(users, ({ one, many }) => ({
+  avatar: one(files, { fields: [users.avatar_id], references: [files.id] }),
+  cart_items: many(cart_items),
   orders: many(orders),
   reviews: many(reviews),
   addresses: many(addresses),
   files: many(files),
 }));
-export const fileRelations = relations(files, ({ one, many }) => ({
-  user: one(users, { fields: [files.userId], references: [users.id] }),
-  productImages: many(productImages),
-  reviewImages: many(reviewImages),
+export const file_relations = relations(files, ({ one, many }) => ({
+  user: one(users, { fields: [files.user_id], references: [users.id] }),
+  product_images: many(product_images),
+  review_images: many(review_images),
 }));
-export const productRelations = relations(products, ({ one, many }) => ({
-  category: one(categories, { fields: [products.categoryId], references: [categories.id] }),
-  images: many(productImages),
-  cartItems: many(cartItems),
-  orderItems: many(orderItems),
+export const product_relations = relations(products, ({ one, many }) => ({
+  category: one(categories, { fields: [products.category_id], references: [categories.id] }),
+  images: many(product_images),
+  cart_items: many(cart_items),
+  order_items: many(order_items),
   reviews: many(reviews),
 }));
-export const categoryRelations = relations(categories, ({ one, many }) => ({
-  image: one(files, { fields: [categories.imageId], references: [files.id] }),
+export const category_relations = relations(categories, ({ one, many }) => ({
+  image: one(files, { fields: [categories.image_id], references: [files.id] }),
   products: many(products),
 }));
-export const cartItemRelations = relations(cartItems, ({ one }) => ({
-  user: one(users, { fields: [cartItems.userId], references: [users.id] }),
-  product: one(products, { fields: [cartItems.productId], references: [products.id] }),
+export const cart_item_relations = relations(cart_items, ({ one }) => ({
+  user: one(users, { fields: [cart_items.user_id], references: [users.id] }),
+  product: one(products, { fields: [cart_items.product_id], references: [products.id] }),
 }));
-export const orderRelations = relations(orders, ({ one, many }) => ({
-  user: one(users, { fields: [orders.userId], references: [users.id] }),
-  items: many(orderItems),
+export const order_relations = relations(orders, ({ one, many }) => ({
+  user: one(users, { fields: [orders.user_id], references: [users.id] }),
+  items: many(order_items),
   payments: many(payments),
 }));
-export const orderItemRelations = relations(orderItems, ({ one }) => ({
-  order: one(orders, { fields: [orderItems.orderId], references: [orders.id] }),
-  product: one(products, { fields: [orderItems.productId], references: [products.id] }),
+export const order_item_relations = relations(order_items, ({ one }) => ({
+  order: one(orders, { fields: [order_items.order_id], references: [orders.id] }),
+  product: one(products, { fields: [order_items.product_id], references: [products.id] }),
 }));
-export const paymentRelations = relations(payments, ({ one }) => ({
-  order: one(orders, { fields: [payments.orderId], references: [orders.id] }),
+export const payment_relations = relations(payments, ({ one }) => ({
+  order: one(orders, { fields: [payments.order_id], references: [orders.id] }),
 }));
-export const reviewRelations = relations(reviews, ({ one, many }) => ({
-  user: one(users, { fields: [reviews.userId], references: [users.id] }),
-  product: one(products, { fields: [reviews.productId], references: [products.id] }),
-  images: many(reviewImages),
+export const review_relations = relations(reviews, ({ one, many }) => ({
+  user: one(users, { fields: [reviews.user_id], references: [users.id] }),
+  product: one(products, { fields: [reviews.product_id], references: [products.id] }),
+  images: many(review_images),
 }));
-export const reviewImageRelations = relations(reviewImages, ({ one }) => ({
-  review: one(reviews, { fields: [reviewImages.reviewId], references: [reviews.id] }),
-  file: one(files, { fields: [reviewImages.fileId], references: [files.id] }),
+export const review_image_relations = relations(review_images, ({ one }) => ({
+  review: one(reviews, { fields: [review_images.review_id], references: [reviews.id] }),
+  file: one(files, { fields: [review_images.file_id], references: [files.id] }),
 }));
-export const addressRelations = relations(addresses, ({ one }) => ({
-  user: one(users, { fields: [addresses.userId], references: [users.id] }),
+export const address_relations = relations(addresses, ({ one }) => ({
+  user: one(users, { fields: [addresses.user_id], references: [users.id] }),
 }));
 ```
 
@@ -296,10 +299,10 @@ Authentication is delegated to a **self-hosted Zitadel** instance using **Author
   success: true,
   data: {
     issuer: string          // e.g. http://localhost:8080
-    clientId: string        // Zitadel SPA application client ID
-    redirectUri: string     // e.g. http://localhost:5173/auth/callback
+    client_id: string        // Zitadel SPA application client ID
+    redirect_uri: string     // e.g. http://localhost:5173/auth/callback
     scopes: string[]        // ["openid", "profile", "email"]
-    endSessionUri: string   // Zitadel logout endpoint
+    end_session_uri: string   // Zitadel logout endpoint
   }
 }
 ```
@@ -309,8 +312,8 @@ The SPA fetches this on boot so the OIDC settings aren't hardcoded on the client
 ```
 1. SPA → GET /api/auth/config → Zitadel authorize URL:
    {issuer}/oauth/v2/authorize?
-     client_id={clientId}
-     &redirect_uri={redirectUri}
+     client_id={client_id}
+     &redirect_uri={redirect_uri}
      &scope=openid profile email
      &response_type=code
      &state={random}
@@ -318,7 +321,7 @@ The SPA fetches this on boot so the OIDC settings aren't hardcoded on the client
      &code_challenge={S256(pkce_verifier)}
      &code_challenge_method=S256          // verifier kept in sessionStorage, never sent
 2. User signs in on Zitadel's hosted page (password, MFA, social, self-register).
-3. Zitadel → 302 {redirectUri}?code={code}&state={state}
+3. Zitadel → 302 {redirect_uri}?code={code}&state={state}
 4. SPA POST {issuer}/oauth/v2/token
    grant_type=authorization_code | client_id | code | redirect_uri | code_verifier
    → { access_token, refresh_token, id_token }
@@ -330,7 +333,7 @@ The SPA fetches this on boot so the OIDC settings aren't hardcoded on the client
 #### POST `/api/auth/logout` (protected)
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>       // only proves a valid session exists
+Authorization: Bearer <access_token>       // only proves a valid session exists
 
 // Response 200
 {
@@ -342,7 +345,7 @@ Authorization: Bearer <accessToken>       // only proves a valid session exists
 401 - Unauthorized
 ```
 Backend is stateless — it just returns OK. The SPA then clears its stored tokens and redirects to Zitadel's end-session endpoint:
-`{endSessionUri}?id_token_hint={id_token}&post_logout_redirect_uri={frontend_url}`.
+`{end_session_uri}?id_token_hint={id_token}&post_logout_redirect_uri={frontend_url}`.
 
 #### Token refresh (no endpoint of ours)
 - The SPA refreshes **directly with Zitadel**: `POST {issuer}/oauth/v2/token` with `grant_type=refresh_token&refresh_token={...}&client_id={...}`.
@@ -360,9 +363,9 @@ Backend is stateless — it just returns OK. The SPA then clears its stored toke
 ```typescript
 // Query Params
 ?search=string        // search by name
-?categoryId=string    // filter by category
-?minPrice=number      // min price
-?maxPrice=number      // max price
+?category_id=string    // filter by category
+?min_price=number      // min price
+?max_price=number      // max price
 ?rating=number        // min rating
 ?page=number          // default 1
 ?limit=number         // default 12, max 50
@@ -381,7 +384,7 @@ Backend is stateless — it just returns OK. The SPA then clears its stored toke
     page: number
     limit: number
     total: number
-    totalPages: number
+    total_pages: number
   }
 }
 ```
@@ -395,7 +398,7 @@ Backend is stateless — it just returns OK. The SPA then clears its stored toke
     id, name, slug, description, price, images, stock,
     category: { id, name, slug },
     reviews: [{
-      id, rating, comment, createdAt,
+      id, rating, comment, created_at,
       user: { id, name, avatar }
     }],
     _avg: { rating: number },
@@ -410,7 +413,7 @@ Backend is stateless — it just returns OK. The SPA then clears its stored toke
 #### POST `/api/products` (Admin)
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 Role: USER | ADMIN
 
 // Request
@@ -418,16 +421,16 @@ Role: USER | ADMIN
   name: string
   description: string
   price: number
-  categoryId: string
+  category_id: string
   stock: number
-  imageIds: string[]    // max 5 file IDs (upload files first via /api/files/upload)
+  image_ids: string[]    // max 5 file IDs (upload files first via /api/files/upload)
 }
 
 // Response 201
 {
   success: true,
   data: {
-    id, name, slug, description, price, stock, categoryId, createdAt,
+    id, name, slug, description, price, stock, category_id, created_at,
     images: [{ id, url, order }]
   }
 }
@@ -442,7 +445,7 @@ Role: USER | ADMIN
 #### PATCH `/api/products/:id` (Admin)
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 Role: USER | ADMIN
 
 // Request
@@ -450,16 +453,16 @@ Role: USER | ADMIN
   name?: string
   description?: string
   price?: number
-  categoryId?: string
+  category_id?: string
   stock?: number
-  imageIds?: string[]   // replace all images with these
+  image_ids?: string[]   // replace all images with these
 }
 
 // Response 200
 {
   success: true,
   data: {
-    id, name, slug, description, price, stock, categoryId, updatedAt,
+    id, name, slug, description, price, stock, category_id, updated_at,
     images: [{ id, url, order }]
   }
 }
@@ -475,7 +478,7 @@ Role: USER | ADMIN
 #### DELETE `/api/products/:id` (Admin)
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 Role: USER | ADMIN
 
 // Response 200
@@ -505,13 +508,13 @@ Role: USER | ADMIN
 #### POST `/api/categories` (Admin)
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 Role: USER | ADMIN
 
 // Request
 {
   name: string       // required, unique
-  fileId?: string    // optional, upload file first via /api/files/upload
+  file_id?: string    // optional, upload file first via /api/files/upload
 }
 
 // Response 201
@@ -531,19 +534,19 @@ Role: USER | ADMIN
 #### PATCH `/api/categories/:id` (Admin)
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 Role: USER | ADMIN
 
 // Request
 {
   name?: string
-  fileId?: string
+  file_id?: string
 }
 
 // Response 200
 {
   success: true,
-  data: { id, name, slug, image: { id, url }, updatedAt }
+  data: { id, name, slug, image: { id, url }, updated_at }
 }
 
 // Errors
@@ -558,7 +561,7 @@ Role: USER | ADMIN
 #### DELETE `/api/categories/:id` (Admin)
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 Role: USER | ADMIN
 
 // Response 200
@@ -581,7 +584,7 @@ Role: USER | ADMIN
 #### GET `/api/cart`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Response 200
 {
@@ -592,10 +595,10 @@ Authorization: Bearer <accessToken>
       quantity,
       product: { id, name, slug, price, images[0], stock }
     }],
-    subtotal: number,
+    sub_total: number,
     shipping: number,   // estimate (same pricing rule as order creation)
     tax: number,        // estimate
-    total: number       // subtotal + shipping + tax
+    total: number       // sub_total + shipping + tax
   }
 }
 
@@ -606,11 +609,11 @@ Authorization: Bearer <accessToken>
 #### POST `/api/cart`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Request
 {
-  productId: string  // required
+  product_id: string  // required
   quantity: number   // required, min 1
 }
 
@@ -634,7 +637,7 @@ Authorization: Bearer <accessToken>
 #### PATCH `/api/cart/:id`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Request
 {
@@ -662,7 +665,7 @@ Authorization: Bearer <accessToken>
 #### DELETE `/api/cart/:id`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Response 200
 {
@@ -679,7 +682,7 @@ Authorization: Bearer <accessToken>
 #### DELETE `/api/cart`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Response 200
 {
@@ -698,11 +701,11 @@ Authorization: Bearer <accessToken>
 #### POST `/api/orders`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Request
 {
-  shippingAddress: {
+  shipping_address: {
     line1: string
     line2?: string
     city: string
@@ -721,12 +724,12 @@ Authorization: Bearer <accessToken>
     total,
     shipping,   // snapshot, computed at creation (delta: extends Order model)
     tax,        // snapshot, computed at creation
-    shippingAddress,
+    shipping_address,
     items: [{
       id, quantity, price,
       product: { id, name, images[0] }
     }],
-    createdAt
+    created_at
   }
 }
 
@@ -739,7 +742,7 @@ Authorization: Bearer <accessToken>
 #### GET `/api/orders`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Query Params
 ?page=number
@@ -750,10 +753,10 @@ Authorization: Bearer <accessToken>
 {
   success: true,
   data: [{
-    id, status, total, shipping, tax, createdAt,
+    id, status, total, shipping, tax, created_at,
     items: [{ quantity, product: { name, images[0] } }]
   }],
-  pagination: { page, limit, total, totalPages }
+  pagination: { page, limit, total, total_pages }
 }
 
 // Errors
@@ -763,20 +766,20 @@ Authorization: Bearer <accessToken>
 #### GET `/api/orders/:id`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Response 200
 {
   success: true,
   data: {
-    id, status, total, shipping, tax, shippingAddress, createdAt,
+    id, status, total, shipping, tax, shipping_address, created_at,
     items: [{
       id, quantity, price,
       product: { id, name, slug, images[0] }
     }],
     payment: {
-      cardBrand: string
-      cardLast4: string
+      card_brand: string
+      card_last_4: string
     }
   }
 }
@@ -790,7 +793,7 @@ Authorization: Bearer <accessToken>
 #### PATCH `/api/admin/orders/:id/status` (Admin)
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 Role: USER | ADMIN
 
 // Request
@@ -802,7 +805,7 @@ Role: USER | ADMIN
 {
   success: true,
   data: {
-    id, status, updatedAt
+    id, status, updated_at
   }
 }
 
@@ -830,19 +833,19 @@ CANCELLED → (terminal)
 #### POST `/api/checkout/create-session`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Request
 {
-  orderId: string  // order created via POST /api/orders (status PENDING)
+  order_id: string  // order created via POST /api/orders (status PENDING)
 }
 
 // Response 200
 {
   success: true,
   data: {
-    orderId: string
-    sessionId: string
+    order_id: string
+    session_id: string
     url: string  // Stripe checkout URL
   }
 }
@@ -881,33 +884,33 @@ Stripe-Signature: string  // Stripe webhook signature
 {
   success: true,
   data: [{
-    id, rating, comment, createdAt,
+    id, rating, comment, created_at,
     user: { id, name, avatar },
     images: [{ id, url }]
   }],
   _avg: { rating: number },
   _count: { reviews: number },
-  pagination: { page, limit, total, totalPages }
+  pagination: { page, limit, total, total_pages }
 }
 ```
 
 #### POST `/api/products/:id/reviews`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Request
 {
   rating: number     // required, 1-5
   comment?: string   // optional, max 500 chars
-  imageIds?: string[] // optional, upload files first via /api/files/upload, max 5
+  image_ids?: string[] // optional, upload files first via /api/files/upload, max 5
 }
 
 // Response 201
 {
   success: true,
   data: {
-    id, rating, comment, createdAt,
+    id, rating, comment, created_at,
     user: { id, name, avatar },
     images: [{ id, url }]
   }
@@ -927,7 +930,7 @@ Authorization: Bearer <accessToken>
 #### DELETE `/api/reviews/:id`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Response 200
 {
@@ -948,25 +951,25 @@ Authorization: Bearer <accessToken>
 #### GET `/api/admin/stats`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 Role: USER | ADMIN
 
 // Response 200
 {
   success: true,
   data: {
-    totalRevenue: number
-    totalOrders: number
-    totalUsers: number
-    totalProducts: number
-    newUsersThisWeek: number
-    ordersThisWeek: number
-    lowStockProducts: number   // products with stock ≤ 5
-    recentOrders: [{
-      id, total, status, createdAt,
+    total_revenue: number
+    total_orders: number
+    total_users: number
+    total_products: number
+    new_users_this_week: number
+    orders_this_week: number
+    low_stock_products: number   // products with stock ≤ 5
+    recent_orders: [{
+      id, total, status, created_at,
       user: { name }
     }],
-    salesByDay: [{
+    sales_by_day: [{
       date: string
       revenue: number
     }]
@@ -981,12 +984,12 @@ Role: USER | ADMIN
 #### GET `/api/admin/products`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 Role: USER | ADMIN
 
 // Query Params
 ?search=string          // search by name
-?categoryId=string      // filter by category
+?category_id=string      // filter by category
 ?stock=string           // "in_stock" | "out_of_stock" | "low" (low = stock ≤ 5)
 ?page=number
 ?limit=number
@@ -998,9 +1001,9 @@ Role: USER | ADMIN
     id, name, slug, description, price, stock,
     category: { id, name, slug },
     images: [{ id, url, order }],
-    createdAt, updatedAt
+    created_at, updated_at
   }],
-  pagination: { page, limit, total, totalPages }
+  pagination: { page, limit, total, total_pages }
 }
 
 // Errors
@@ -1011,13 +1014,13 @@ Role: USER | ADMIN
 #### GET `/api/admin/orders`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 Role: USER | ADMIN
 
 // Query Params
 ?status=OrderStatus
-?dateFrom=string   // ISO date
-?dateTo=string     // ISO date
+?date_from=string   // ISO date
+?date_to=string     // ISO date
 ?page=number
 ?limit=number
 
@@ -1025,11 +1028,11 @@ Role: USER | ADMIN
 {
   success: true,
   data: [{
-    id, status, total, shipping, tax, createdAt,
+    id, status, total, shipping, tax, created_at,
     user: { id, name, email },
     items: [{ quantity, product: { name, images[0] } }]
   }],
-  pagination: { page, limit, total, totalPages }
+  pagination: { page, limit, total, total_pages }
 }
 
 // Errors
@@ -1040,7 +1043,7 @@ Role: USER | ADMIN
 #### GET `/api/admin/users`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 Role: ADMIN  // Only ADMIN can manage users
 
 // Query Params
@@ -1053,10 +1056,10 @@ Role: ADMIN  // Only ADMIN can manage users
 {
   success: true,
   data: [{
-    id, name, email, role, createdAt,
+    id, name, email, role, created_at,
     _count: { orders: number }
   }],
-  pagination: { page, limit, total, totalPages }
+  pagination: { page, limit, total, total_pages }
 }
 
 // Errors
@@ -1067,7 +1070,7 @@ Role: ADMIN  // Only ADMIN can manage users
 #### PUT `/api/admin/users/:id/role`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 Role: ADMIN  // Only ADMIN can change roles
 
 // Request
@@ -1097,14 +1100,14 @@ Role: ADMIN  // Only ADMIN can change roles
 #### GET `/api/users/me`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Response 200
 {
   success: true,
   data: {
-    id, name, email, phone, avatar, role, createdAt,   // id = Zitadel sub; role from our DB
-    addresses: [{ id, label, line1, city, state, zip, isDefault }]
+    id, name, email, phone, avatar, role, created_at,   // id = Zitadel sub; role from our DB
+    addresses: [{ id, label, line1, city, state, zip, is_default }]
   }
 }
 
@@ -1119,13 +1122,13 @@ Authorization: Bearer <accessToken>
 #### PATCH `/api/users/me`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Request
 {
   name?: string
   phone?: string
-  avatarId?: string   // upload file first via /api/files/upload
+  avatar_id?: string   // upload file first via /api/files/upload
 }
 
 // Response 200
@@ -1146,7 +1149,7 @@ Authorization: Bearer <accessToken>
 #### POST `/api/users/me/address`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Request
 {
@@ -1157,14 +1160,14 @@ Authorization: Bearer <accessToken>
   state: string
   zip: string
   country?: string   // default "US"
-  isDefault?: boolean
+  is_default?: boolean
 }
 
 // Response 201
 {
   success: true,
   data: {
-    id, label, line1, line2, city, state, zip, country, isDefault
+    id, label, line1, line2, city, state, zip, country, is_default
   }
 }
 
@@ -1176,7 +1179,7 @@ Authorization: Bearer <accessToken>
 #### PATCH `/api/users/me/address/:id`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Request
 {
@@ -1187,14 +1190,14 @@ Authorization: Bearer <accessToken>
   state?: string
   zip?: string
   country?: string
-  isDefault?: boolean
+  is_default?: boolean
 }
 
 // Response 200
 {
   success: true,
   data: {
-    id, label, line1, line2, city, state, zip, country, isDefault
+    id, label, line1, line2, city, state, zip, country, is_default
   }
 }
 
@@ -1208,7 +1211,7 @@ Authorization: Bearer <accessToken>
 #### DELETE `/api/users/me/address/:id`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Response 200
 {
@@ -1229,26 +1232,26 @@ Authorization: Bearer <accessToken>
 #### POST `/api/files/upload`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Request (multipart/form-data)
 file: File           // required, max 5MB
-entityType?: string  // "user" | "product" | "category" | "review"
-entityId?: string    // ID of entity to link
+entity_type?: string  // "user" | "product" | "category" | "review"
+entity_id?: string    // ID of entity to link
 
 // Response 201
 {
   success: true,
   data: {
     id,
-    originalName,
-    fileName,
-    mimeType,
+    original_name,
+    file_name,
+    mime_type,
     size,
     url,
-    entityType,
-    entityId,
-    createdAt
+    entity_type,
+    entity_id,
+    created_at
   }
 }
 
@@ -1261,18 +1264,18 @@ entityId?: string    // ID of entity to link
 #### POST `/api/files/upload/multiple`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Request (multipart/form-data)
 files: File[]        // required, max 5 files, max 5MB each
-entityType?: string
-entityId?: string
+entity_type?: string
+entity_id?: string
 
 // Response 201
 {
   success: true,
   data: [{
-    id, originalName, fileName, mimeType, size, url, entityType, entityId
+    id, original_name, file_name, mime_type, size, url, entity_type, entity_id
   }]
 }
 
@@ -1284,11 +1287,11 @@ entityId?: string
 #### GET `/api/files`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Query Params
-?entityType=string   // filter by entity type
-?entityId=string     // filter by entity ID
+?entity_type=string   // filter by entity type
+?entity_id=string     // filter by entity ID
 ?page=number
 ?limit=number
 
@@ -1296,9 +1299,9 @@ Authorization: Bearer <accessToken>
 {
   success: true,
   data: [{
-    id, originalName, fileName, mimeType, size, url, entityType, entityId, createdAt
+    id, original_name, file_name, mime_type, size, url, entity_type, entity_id, created_at
   }],
-  pagination: { page, limit, total, totalPages }
+  pagination: { page, limit, total, total_pages }
 }
 
 // Errors
@@ -1311,7 +1314,7 @@ Authorization: Bearer <accessToken>
 {
   success: true,
   data: {
-    id, originalName, fileName, mimeType, size, url, entityType, entityId, createdAt
+    id, original_name, file_name, mime_type, size, url, entity_type, entity_id, created_at
   }
 }
 
@@ -1322,7 +1325,7 @@ Authorization: Bearer <accessToken>
 #### DELETE `/api/files/:id`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Response 200
 {
@@ -1339,19 +1342,19 @@ Authorization: Bearer <accessToken>
 #### PUT `/api/files/:id/link`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Request
 {
-  entityType: string  // "user" | "product" | "category" | "review"
-  entityId: string    // ID of entity to link
+  entity_type: string  // "user" | "product" | "category" | "review"
+  entity_id: string    // ID of entity to link
 }
 
 // Response 200
 {
   success: true,
   data: {
-    id, entityType, entityId
+    id, entity_type, entity_id
   }
 }
 
@@ -1366,13 +1369,13 @@ Authorization: Bearer <accessToken>
 #### PUT `/api/files/:id/unlink`
 ```typescript
 // Headers
-Authorization: Bearer <accessToken>
+Authorization: Bearer <access_token>
 
 // Response 200
 {
   success: true,
   data: {
-    id, entityType: null, entityId: null
+    id, entity_type: null, entity_id: null
   }
 }
 
@@ -1391,17 +1394,17 @@ Authorization: Bearer <accessToken>
 {
   auth: {
     user: { id, name, email, role, avatar }
-    accessToken: string
-    refreshToken: string
-    isAuthenticated: boolean
+    access_token: string
+    refresh_token: string
+    is_authenticated: boolean
   },
   cart: {
-    items: [{ productId, name, price, image, quantity }]
+    items: [{ product_id, name, price, image, quantity }]
     total: number
   },
   ui: {
-    isCartOpen: boolean
-    isMobileMenuOpen: boolean
+    is_cart_open: boolean
+    is_mobile_menu_open: boolean
     theme: 'light' | 'dark'
   }
 }
@@ -1420,15 +1423,15 @@ Why:
 
 ### RTK Query Endpoints
 ```typescript
-authApi:        getAuthConfig, logout   // sign-in/refresh run in the SPA against Zitadel (OIDC + PKCE, §3.1)
-productsApi:    getProducts, getProduct, createProduct, updateProduct, deleteProduct
-categoriesApi:  getCategories, createCategory, updateCategory, deleteCategory
-cartApi:        getCart, addToCart, updateCartItem, removeFromCart, clearCart
-ordersApi:      createOrder, getOrders, getOrder
-reviewsApi:     getProductReviews, createReview, deleteReview
-adminApi:       getStats, getUsers
-usersApi:       getProfile, updateProfile, addAddress, updateAddress, deleteAddress
-filesApi:       uploadFile, uploadMultiple, getFiles, getFile, deleteFile, linkFile, unlinkFile
+auth_api:        get_auth_config, logout   // sign-in/refresh run in the SPA against Zitadel (OIDC + PKCE, §3.1)
+products_api:    get_products, get_product, create_product, update_product, delete_product
+categories_api:  get_categories, create_category, update_category, delete_category
+cart_api:        get_cart, add_to_cart, update_cart_item, remove_from_cart, clear_cart
+orders_api:      create_order, get_orders, get_order
+reviews_api:     get_product_reviews, create_review, delete_review
+admin_api:       get_stats, get_users
+users_api:       get_profile, update_profile, add_address, update_address, delete_address
+files_api:       upload_file, upload_multiple, get_files, get_file, delete_file, link_file, unlink_file
 ```
 
 ---
@@ -1570,7 +1573,7 @@ App
     page: number
     limit: number
     total: number
-    totalPages: number
+    total_pages: number
   }
 }
 ```
@@ -1608,8 +1611,8 @@ ecommerce/
 ### Product Images
 ```
 Bucket: ecommerce
-Key: products/{productId}/{filename}
-URL: {MINIO_ENDPOINT}/{bucket}/products/{productId}/{filename}
+Key: products/{product_id}/{filename}
+URL: {MINIO_ENDPOINT}/{bucket}/products/{product_id}/{filename}
 
 Limits:
 - Max 5MB per image
@@ -1621,8 +1624,8 @@ Limits:
 ### User Avatars
 ```
 Bucket: ecommerce
-Key: avatars/{userId}/{filename}
-URL: {MINIO_ENDPOINT}/{bucket}/avatars/{userId}/{filename}
+Key: avatars/{user_id}/{filename}
+URL: {MINIO_ENDPOINT}/{bucket}/avatars/{user_id}/{filename}
 
 Limits:
 - Max 2MB
@@ -1645,8 +1648,8 @@ Limits:
 ### Review Images
 ```
 Bucket: ecommerce
-Key: reviews/{reviewId}/{filename}
-URL: {MINIO_ENDPOINT}/{bucket}/reviews/{reviewId}/{filename}
+Key: reviews/{review_id}/{filename}
+URL: {MINIO_ENDPOINT}/{bucket}/reviews/{review_id}/{filename}
 
 Limits:
 - Max 5MB per image
@@ -1682,27 +1685,27 @@ Limits:
 ```typescript
 // services/minio.service.ts (plus utils/http-error.ts)
 import { db, files } from "../db";
-import { httpError } from "../utils/http-error";
+import { http_error } from "../utils/http-error";
 
-async uploadFile(
+async upload_file(
   file: Express.Multer.File,
-  userId: string,
-  entityType?: string,
-  entityId?: string
+  user_id: string,
+  entity_type?: string,
+  entity_id?: string
 ): Promise<typeof files.$inferSelect> {
   // Build folder path based on entity type
   let folder = 'uploads';
-  if (entityType === 'product') folder = 'products';
-  else if (entityType === 'avatar') folder = 'avatars';
-  else if (entityType === 'category') folder = 'categories';
-  else if (entityType === 'review') folder = 'reviews';
+  if (entity_type === 'product') folder = 'products';
+  else if (entity_type === 'avatar') folder = 'avatars';
+  else if (entity_type === 'category') folder = 'categories';
+  else if (entity_type === 'review') folder = 'reviews';
 
-  // For review images, include entityId in path
-  const key = entityId
-    ? `${folder}/${entityId}/${crypto.randomUUID()}${extname(file.originalname)}`
+  // For review images, include entity_id in path
+  const key = entity_id
+    ? `${folder}/${entity_id}/${crypto.randomUUID()}${extname(file.originalname)}`
     : `${folder}/${crypto.randomUUID()}${extname(file.originalname)}`;
 
-  await this.minioClient.putObject(
+  await this.minio_client.putObject(
     'ecommerce',
     key,
     file.buffer,
@@ -1710,35 +1713,35 @@ async uploadFile(
     { 'Content-Type': file.mimetype }
   );
 
-  const url = `${this.minioEndpoint}/ecommerce/${key}`;
+  const url = `${this.minio_endpoint}/ecommerce/${key}`;
 
   const [created] = await db.insert(files).values({
-    userId,
-    originalName: file.originalname,
-    fileName: `${crypto.randomUUID()}${extname(file.originalname)}`,
-    mimeType: file.mimetype,
+    user_id,
+    original_name: file.originalname,
+    file_name: `${crypto.randomUUID()}${extname(file.originalname)}`,
+    mime_type: file.mimetype,
     size: file.size,
     bucket: 'ecommerce',
     key,
     url,
-    entityType,
-    entityId,
+    entity_type,
+    entity_id,
   }).returning();
   return created;
 }
 
-async deleteFile(fileId: string): Promise<void> {
-  const [file] = await db.select().from(files).where(eq(files.id, fileId)).limit(1);
-  if (!file) throw httpError(404, 'File not found');
+async delete_file(file_id: string): Promise<void> {
+  const [file] = await db.select().from(files).where(eq(files.id, file_id)).limit(1);
+  if (!file) throw http_error(404, 'File not found');
 
-  await this.minioClient.removeObject(file.bucket, file.key);
-  await db.delete(files).where(eq(files.id, fileId));
+  await this.minio_client.removeObject(file.bucket, file.key);
+  await db.delete(files).where(eq(files.id, file_id));
 }
 
-async linkToEntity(fileId: string, entityType: string, entityId: string) {
+async link_to_entity(file_id: string, entity_type: string, entity_id: string) {
   const [linked] = await db.update(files)
-    .set({ entityType, entityId })
-    .where(eq(files.id, fileId))
+    .set({ entity_type, entity_id })
+    .where(eq(files.id, file_id))
     .returning();
   return linked;
 }
@@ -1828,10 +1831,10 @@ Referrer-Policy: strict-origin-when-cross-origin
 ```
 
 ### Token Validation
-- `requireAuth` middleware uses `jose`'s `createRemoteJWKSet` against Zitadel's JWKS endpoint (`{issuer}/.well-known/openid-configuration` → `jwks_uri`).
+- `require_auth` middleware uses `jose`'s `createRemoteJWKSet` against Zitadel's JWKS endpoint (`{issuer}/.well-known/openid-configuration` → `jwks_uri`).
 - Verifies `exp`, `aud` (must match our client ID), and `iss` (must match `ZITADEL_ISSUER`).
-- Extracts `sub` as `userId` — no DB lookup on every request; the token is the identity proof.
-- Sets `req.userId = payload.sub`, `req.user = { sub, email, name }` (from verified token claims).
+- Extracts `sub` as `user_id` — no DB lookup on every request; the token is the identity proof.
+- Sets `req.user_id = payload.sub`, `req.user = { sub, email, name }` (from verified token claims).
 
 ### Input Validation
 - `zod` schemas (`*.schema.ts`) validated by a shared `validate(schema)` middleware
@@ -1862,7 +1865,7 @@ Referrer-Policy: strict-origin-when-cross-origin
 | Invalid enum / `22P02` | 400 | Bad value → `VALIDATION_ERROR` |
 | Driver: connect/auth refused | 500 | `INTERNAL_ERROR` |
 
-> Unlike Prisma (which threw `P2025`), Drizzle's `select().limit(1)` / `update().returning()` return an **empty array or `undefined`** when nothing matches — wrap with a `findOr404`/`getOr404` helper that throws `httpError(404, 'Not found')`. There is no "not found" DB error to catch; it is an application-level check in the service layer.
+> Unlike Prisma (which threw `P2025`), Drizzle's `select().limit(1)` / `update().returning()` return an **empty array or `undefined`** when nothing matches — wrap with a `find_or_404`/`get_or_404` helper that throws `http_error(404, 'Not found')`. There is no "not found" DB error to catch; it is an application-level check in the service layer.
 
 ---
 
@@ -1872,7 +1875,7 @@ Referrer-Policy: strict-origin-when-cross-origin
 ```bash
 PORT=3000
 API_PREFIX=api
-DATABASE_URL="postgresql://user:pass@localhost:5432/ecommerce"
+DATABASE_URL="postgresql://user:pass@localhost:5432/horizon-ecommerce"
 ZITADEL_ISSUER=http://localhost:8080        # self-hosted Zitadel instance
 ZITADEL_CLIENT_ID=your-spa-client-id        # from Zitadel console → App → SPA OIDC
 ZITADEL_REDIRECT_URI=http://localhost:5173/auth/callback
@@ -1894,7 +1897,7 @@ CORS_ORIGIN=http://localhost:5173
 VITE_API_URL=http://localhost:3000/api
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_xxx
 ```
-OIDC issuer/clientId/redirectUri are **not** hardcoded — the SPA fetches them from `GET /api/auth/config` on boot (§3.1).
+OIDC issuer/client_id/redirect_uri are **not** hardcoded — the SPA fetches them from `GET /api/auth/config` on boot (§3.1).
 
 ---
 
