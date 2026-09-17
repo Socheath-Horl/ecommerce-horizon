@@ -48,8 +48,8 @@
 - [x] Verify: tables exist in PostgreSQL (`npx drizzle-kit check` / psql `\dt`)
 
 ### 1.4 Backend — DB Client (Drizzle)
-- [ ] Create the shared drizzle client wrapper (`src/db/index.ts`) exporting one `db` instance + all `schema` tables for services to import
-- [ ] Verify: `npm run build` compiles
+- [x] Create the shared drizzle client wrapper (`src/db/index.ts`) exporting one `db` instance + all `schema` tables for services to import
+- [x] Verify: `npm run build` compiles
 
 ### 1.5 Backend — Seed File
 - [ ] Add `is_featured boolean default(false)` to `products` in `src/db/schema.ts` (Home "Featured Products" needs it) — included in the initial migration
