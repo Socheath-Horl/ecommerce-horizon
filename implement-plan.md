@@ -56,11 +56,11 @@
 - [ ] Install `tsx` (dev) as the script runner
 - [ ] Add seed script to `package.json` (`db:seed` → `tsx src/db/seed.ts`)
 - [ ] Create `src/db/seed.ts` — idempotent by slug/email (`onConflictDoNothing`) so re-seeding never duplicates
-- [ ] Ensure the admin identity exists in **Zitadel** (console or self-registration); the seed only records admin's `sub`:**role = ADMIN` for the known admin email (`onConflictDoUpdate` on users.email) — bcrypt is gone, the app never stores passwords
-- [ ] Seed sample categories (brand = Horizon Supply Co. — match `ux-ui/`): Outerwear, Travel, Carry & Desk, Drinkware
-- [ ] Seed sample products per category (use the SKUs from `ux-ui/`: FLT-04 Field Jacket, WKD-09 Weekender Duffel, FLK-24 Stainless Flask, FGT-02 Flight Tote, DSR-01 Desk Roll, ZPL-L4 Zip Pouch, TMB-16 Tumbler, MRN-HV Merino Crew — all `is_featured`)
-- [ ] Run seed (`npm run db:seed`)
-- [ ] Verify: data check (categories = 4, products = 8, admin = ADMIN)
+- [x] Ensure the admin identity exists in **Zitadel** (console or self-registration); the seed only records admin's `sub`:**role = ADMIN` for the known admin email (`onConflictDoUpdate` on users.email) — bcrypt is gone, the app never stores passwords
+- [x] Seed sample categories (brand = Horizon Supply Co. — match `ux-ui/`): Outerwear, Travel, Carry & Desk, Drinkware
+- [x] Seed sample products per category (match `ux-ui/` prototype products — user chose prototype data over spec SKUs: Waxed Field Jacket, Country Wax Jacket, Weekender Duffel, Canvas Duffel, Cabin Carry-On, Trail Mug, Insulated Bottle 750ml, Steel Bottle 1L, Utility Backpack, Daypack — 8 `is_featured`, 2 not)
+- [x] Run seed (`npm run db:seed`)
+- [x] Verify: data check (categories = 4, products = 10, admin = ADMIN)
 
 ### 1.5.5 Backend — OpenAPI Docs (Scalar UI)
 - [ ] Install `swagger-jsdoc` + `swagger-ui-express` (generate/serve the spec) and `@scalar/api-reference` (render)

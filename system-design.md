@@ -21,7 +21,7 @@ GUEST → CUSTOMER → USER → ADMIN
 The storefront (spec + seed data) implements **Horizon Supply Co.** — an everyday-carry / outdoor-lifestyle goods store:
 - **Categories:** Outerwear (24), Travel (12), Carry & Desk (18), Drinkware (9) — 63 styles total.
 - **Slugs:** `outerwear`, `travel`, `carry-desk`, `drinkware` (URL string used by `GET /api/products?category_id=` and the product-detail breadcrumb).
-- **Products** use SKU-style slugs (e.g. FLT-04 waxed field jacket, WKD-09 weekender duffel, FLK-24 stainless flask); `is_featured` seeds ~8 featured items for the Home grid.
+- **Products** use descriptive slugs matching the `ux-ui/` prototype (waxed-field-jacket, weekender-duffel, trail-mug, …); `is_featured` seeds 8 featured items for the Home grid (all but Steel Bottle 1L and the sold-out Daypack).
 - Seed data and any admin UX copy use these names/values verbatim. Visual reference: `ux-ui/` HTML build (see `system-ui-design.md` §8).
 
 ---
