@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
-import { db } from './index';
-import { categories, products, users } from './schema';
+import { db } from '@/db/index';
+import { categories, products, users } from '@/db/schema';
 
 const ADMIN_EMAIL = 'a@mail.com';
 

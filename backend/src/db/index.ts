@@ -1,9 +1,8 @@
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import * as schema from './schema';
+import { env } from '@/config/env';
+import * as schema from '@/db/schema';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5432/horizon-ecommerce',
-});
+const pool = new Pool({ connectionString: env.database_url });
 
 export const db = drizzle(pool, { schema });
