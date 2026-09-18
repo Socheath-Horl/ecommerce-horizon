@@ -19,6 +19,13 @@
 
 **Backend:** Express + TypeScript, Drizzle ORM + PostgreSQL (`pg`), self-hosted Zitadel (OIDC / Authorization Code + PKCE), `zod` validation, Stripe, MinIO
 
+## Backend Structure (NestJS-inspired, plain Express)
+
+- Each feature lives in `src/modules/<feature>/`: `*.controller.ts` (routes + req/res mapping), `*.service.ts` (business logic), `*.dto.ts` (zod schemas)
+- Controllers expose `static routes(): Router`; services are constructed manually (no DI container)
+- `src/common/` holds cross-cutting concerns: `filters/` (error handlers), `middleware/` (validate, require_auth, require_role), `interceptors/`
+- `src/app.ts` = root module (global middleware + mounting); `src/index.ts` = bootstrap
+
 ## Rules
 
 - **Project scaffolding:** Always run CLI commands to create projects (frontend: `npm create vite@latest`; backend: `npm init` + targeted `npm install`). Never create project files from scratch.

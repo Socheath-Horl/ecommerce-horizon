@@ -52,28 +52,23 @@
 - [x] Verify: `npm run build` compiles
 
 ### 1.5 Backend — Seed File
-- [ ] Add `is_featured boolean default(false)` to `products` in `src/db/schema.ts` (Home "Featured Products" needs it) — included in the initial migration
-- [ ] Install `tsx` (dev) as the script runner
-- [ ] Add seed script to `package.json` (`db:seed` → `tsx src/db/seed.ts`)
-- [ ] Create `src/db/seed.ts` — idempotent by slug/email (`onConflictDoNothing`) so re-seeding never duplicates
+- [x] Add `is_featured boolean default(false)` to `products` in `src/db/schema.ts` (Home "Featured Products" needs it) — included in the initial migration
+- [x] Install `tsx` (dev) as the script runner
+- [x] Add seed script to `package.json` (`db:seed` → `tsx src/db/seed.ts`)
+- [x] Create `src/db/seed.ts` — idempotent by slug/email (`onConflictDoNothing`) so re-seeding never duplicates
 - [x] Ensure the admin identity exists in **Zitadel** (console or self-registration); the seed only records admin's `sub`:**role = ADMIN` for the known admin email (`onConflictDoUpdate` on users.email) — bcrypt is gone, the app never stores passwords
 - [x] Seed sample categories (brand = Horizon Supply Co. — match `ux-ui/`): Outerwear, Travel, Carry & Desk, Drinkware
 - [x] Seed sample products per category (match `ux-ui/` prototype products — user chose prototype data over spec SKUs: Waxed Field Jacket, Country Wax Jacket, Weekender Duffel, Canvas Duffel, Cabin Carry-On, Trail Mug, Insulated Bottle 750ml, Steel Bottle 1L, Utility Backpack, Daypack — 8 `is_featured`, 2 not)
 - [x] Run seed (`npm run db:seed`)
 - [x] Verify: data check (categories = 4, products = 10, admin = ADMIN)
 
-### 1.5.5 Backend — OpenAPI Docs (Scalar UI)
-- [ ] Install `swagger-jsdoc` + `swagger-ui-express` (generate/serve the spec) and `@scalar/api-reference` (render)
-- [ ] Configure OpenAPI spec generation (definitions route → `src/utils/openapi.ts`) and serve raw JSON at `/api-json`
-- [ ] Serve Scalar UI at `/api/docs` pointing at the spec
-- [ ] Add a shared component `$ref` for the `{ success, data, message }` response envelope and the `{ success, error: { code, message, details } }` error body
-- [ ] Annotate each route with `@swagger` JSDoc (method, path, `security: [{ bearer_auth: [] }]`, body/param schema, success + error responses)
-- [ ] Verify: `npm run build` + `GET /api/docs` renders the interactive UI
+### 1.5.5 Backend — OpenAPI Docs (Scalar UI) — DEFERRED
+- [ ] ~~swagger-jsdoc / swagger-ui-express~~ — superseded: user wants **true auto-generation** (spec derived from code, zero JSDoc). Revisit this task once routes exist in Phase 2, likely via **tsoa** (auto-gen from TS types) + `@scalar/api-reference` renderer at `/api/docs`. Skip swagger-ui-express when revived — Scalar already renders.
 
 ### 1.6 Backend — Auth Structure (Zitadel OIDC)
 - [ ] Create `AuthService` (`src/modules/auth/auth.service.ts`) — loads Zitadel OIDC discovery, builds the SPA config payload, upserts users from verified token claims
-- [ ] Create auth router (`src/modules/auth/auth.routes.ts`) — `express.Router()` with the `/config`, `/logout` handlers
-- [ ] Mount the router at `/api/auth` in `src/app.ts`
+- [ ] Create auth controller (`src/modules/auth/auth.controller.ts`) — `express.Router()` with the `/config`, `/logout` handlers
+- [ ] Mount the controller at `/api/auth` in `src/app.ts`
 - [ ] Verify: `npm run build` compiles
 
 ### 1.7 Backend — Validation Infrastructure (zod)
@@ -94,13 +89,13 @@
 
 ### 1.10 Backend — OIDC Config Endpoint
 - [ ] Implement `get_config()` in AuthService — returns issuer, client_id, redirect_uri, scopes, end_session_uri (from env + cached discovery) so the SPA never hardcodes OIDC settings
-- [ ] Add GET `/api/auth/config` route in `auth.routes.ts` (public)
+- [ ] Add GET `/api/auth/config` route in `auth.controller.ts` (public)
 - [ ] OpenAPI: `@swagger` JSDoc on GET /api/auth/config (200 success with the data payload)
 - [ ] Verify: `GET /api/auth/config` returns the SPA settings; complete a browser sign-in round-trip (authorize redirect → Zitadel → code exchange → /users/me)
 
 ### 1.11 Backend — Logout Endpoint
 - [ ] Implement `logout()` in AuthService — stateless: validate the session exists (`require_auth`), return OK
-- [ ] Add POST `/api/auth/logout` route in `auth.routes.ts` (`require_auth`-protected)
+- [ ] Add POST `/api/auth/logout` route in `auth.controller.ts` (`require_auth`-protected)
 - [ ] OpenAPI: `@swagger` JSDoc on POST /api/auth/logout (bearer security, 200, 401)
 - [ ] Verify: Logout returns 200; the SPA then clears storage and redirects to Zitadel's `end_session` endpoint (system-design §3.1)
 
@@ -116,7 +111,7 @@
 ### 1.14 Backend — Profile Endpoint (lazy user upsert)
 - [ ] Implement `get_profile()` in AuthService — upsert `users` from verified token claims on first contact: `id = sub`, `email`/`name` from claims, `role = CUSTOMER` default
 - [ ] Return current user data (id, name, email, phone, avatar, role, addresses)
-- [ ] Add GET `/api/users/me` route in `src/modules/users/users.routes.ts` (per system-design §3.8; `require_auth`, uses `req.user`)
+- [ ] Add GET `/api/users/me` route in `src/modules/users/users.controller.ts` (per system-design §3.8; `require_auth`, uses `req.user`)
 - [ ] OpenAPI: `@swagger` JSDoc on GET /api/users/me (bearer security, 200, 401)
 - [ ] Verify: Profile returns current user data; a brand-new Zitadel user gets a `users` row (role CUSTOMER)
 
@@ -136,8 +131,8 @@
 
 ### 1.17 Backend — Files Structure
 - [ ] Create `FilesService` (`src/modules/files/files.service.ts`)
-- [ ] Create files router (`src/modules/files/files.routes.ts`)
-- [ ] Mount the router at `/api/files` in `src/app.ts`
+- [ ] Create files controller (`src/modules/files/files.controller.ts`)
+- [ ] Mount the controller at `/api/files` in `src/app.ts`
 - [ ] Verify: `npm run build` compiles
 
 ### 1.18 Backend — Basic File Upload Endpoint
@@ -247,8 +242,8 @@
 
 ### 2.1 Backend — Users Structure
 - [ ] Create `UsersService` (`src/modules/users/users.service.ts`)
-- [ ] Create users router (`src/modules/users/users.routes.ts`)
-- [ ] Mount the router in `src/app.ts` (`/api/admin/users`, `/api/users`)
+- [ ] Create users controller (`src/modules/users/users.controller.ts`)
+- [ ] Mount the controller in `src/app.ts` (`/api/admin/users`, `/api/users`)
 - [ ] Verify: `npm run build` compiles
 
 ### 2.2 Backend — Users Validation (zod)
@@ -361,8 +356,8 @@
 
 ### 3.1 Backend — Categories Structure
 - [ ] Create `CategoriesService` (`src/modules/categories/categories.service.ts`)
-- [ ] Create categories router (`src/modules/categories/categories.routes.ts`)
-- [ ] Mount the router at `/api/categories` in `src/app.ts`
+- [ ] Create categories controller (`src/modules/categories/categories.controller.ts`)
+- [ ] Mount the controller at `/api/categories` in `src/app.ts`
 - [ ] Verify: `npm run build` compiles
 
 ### 3.2 Backend — Categories Validation (zod)
@@ -410,8 +405,8 @@
 
 ### 3.8 Backend — Products Structure
 - [ ] Create `ProductsService` (`src/modules/products/products.service.ts`)
-- [ ] Create products router (`src/modules/products/products.routes.ts`)
-- [ ] Mount the router at `/api/products` in `src/app.ts`
+- [ ] Create products controller (`src/modules/products/products.controller.ts`)
+- [ ] Mount the controller at `/api/products` in `src/app.ts`
 - [ ] Verify: `npm run build` compiles
 
 ### 3.9 Backend — Products Validation (zod)
@@ -730,8 +725,8 @@
 
 ### 5.1 Backend — Cart Structure
 - [ ] Create `CartService` (`src/modules/cart/cart.service.ts`)
-- [ ] Create cart router (`src/modules/cart/cart.routes.ts`)
-- [ ] Mount the router at `/api/cart` in `src/app.ts`
+- [ ] Create cart controller (`src/modules/cart/cart.controller.ts`)
+- [ ] Mount the controller at `/api/cart` in `src/app.ts`
 - [ ] Verify: `npm run build` compiles
 
 ### 5.2 Backend — Cart Validation (zod)
@@ -881,8 +876,8 @@
 
 ### 6.3 Backend — Checkout Structure
 - [ ] Create `CheckoutService` (`src/modules/checkout/checkout.service.ts`)
-- [ ] Create checkout router (`src/modules/checkout/checkout.routes.ts`)
-- [ ] Mount the router at `/api/checkout` in `src/app.ts`
+- [ ] Create checkout controller (`src/modules/checkout/checkout.controller.ts`)
+- [ ] Mount the controller at `/api/checkout` in `src/app.ts`
 - [ ] Verify: `npm run build` compiles
 
 ### 6.4 Backend — Order Tables
@@ -903,7 +898,7 @@
 - [ ] Verify: `POST /api/orders` + `create-session` produce a Stripe checkout URL
 
 ### 6.6 Backend — Stripe Webhook Handler
-- [ ] Implement webhook handler in `checkout.routes.ts`
+- [ ] Implement webhook handler in `checkout.controller.ts`
 - [ ] Verify webhook signature
 - [ ] Handle `checkout.session.completed` event
 - [ ] Resolve the order via `order_id` (client_reference_id/metadata) — do **not** create a new order
@@ -987,8 +982,8 @@
 
 ### 7.1 Backend — Orders Structure
 - [ ] Create `OrdersService` (`src/modules/orders/orders.service.ts`)
-- [ ] Create orders router (`src/modules/orders/orders.routes.ts`)
-- [ ] Mount the router at `/api/orders` in `src/app.ts`
+- [ ] Create orders controller (`src/modules/orders/orders.controller.ts`)
+- [ ] Mount the controller at `/api/orders` in `src/app.ts`
 - [ ] Verify: `npm run build` compiles
 
 ### 7.2 Backend — Orders Validation (zod)
@@ -1138,8 +1133,8 @@
 
 ### 8.1 Backend — Reviews Structure
 - [ ] Create `ReviewsService` (`src/modules/reviews/reviews.service.ts`)
-- [ ] Create reviews router (`src/modules/reviews/reviews.routes.ts`)
-- [ ] Mount the router at `/api/reviews` (and `/api/products/:id/reviews`) in `src/app.ts`
+- [ ] Create reviews controller (`src/modules/reviews/reviews.controller.ts`)
+- [ ] Mount the controller at `/api/reviews` (and `/api/products/:id/reviews`) in `src/app.ts`
 - [ ] Verify: `npm run build` compiles
 
 ### 8.2 Backend — Reviews Validation (zod)
@@ -1260,8 +1255,8 @@
 
 ### 9.1 Backend — Admin Structure
 - [ ] Create `AdminService` (`src/modules/admin/admin.service.ts`)
-- [ ] Create admin router (`src/modules/admin/admin.routes.ts`)
-- [ ] Mount the router at `/api/admin` in `src/app.ts`
+- [ ] Create admin controller (`src/modules/admin/admin.controller.ts`)
+- [ ] Mount the controller at `/api/admin` in `src/app.ts`
 - [ ] Verify: `npm run build` compiles
 
 ### 9.2 Backend — Admin Stats Endpoint
