@@ -96,10 +96,10 @@
 - [ ] Verify: `GET /api/auth/config` returns the SPA settings ✅ (Zitadel v4 running on :8080, discovery fetched, real `end_session_uri` returned); **browser sign-in round-trip pending manual step** — create SPA client in Zitadel console (`http://localhost:8080/ui/console`), set real `ZITADEL_CLIENT_ID` in `.env`, then complete authorize → code → /users/me (that last hop needs 1.14 too)
 
 ### 1.11 Backend — Logout Endpoint
-- [ ] Implement `logout()` in AuthService — stateless: validate the session exists (`require_auth`), return OK
-- [ ] Add POST `/api/auth/logout` route in `auth.controller.ts` (`require_auth`-protected)
+- [x] Implement `logout()` in AuthService — stateless: validate the session exists (`require_auth`), return OK
+- [x] Add POST `/api/auth/logout` route in `auth.controller.ts` (`require_auth`-protected)
 - [ ] OpenAPI doc for POST /api/auth/logout → **deferred with 1.5.5** (tsoa auto-gen)
-- [ ] Verify: Logout returns 200; the SPA then clears storage and redirects to Zitadel's `end_session` endpoint (system-design §3.1)
+- [ ] Verify: protected paths work — POST without token → 401 `UNAUTHORIZED`, POST with bogus token → 401 `UNAUTHORIZED` ✅ (hit live server; both rejected by `require_auth`); **200 happy-path pending manual step** — needs a real Zitadel access token from the browser sign-in (SPA client + `ZITADEL_CLIENT_ID` in `.env`)
 
 ### 1.12 Backend — Session Restore (no refresh endpoint of ours)
 - [ ] There is NO `/api/auth/refresh` — the SPA refreshes directly against Zitadel (`grant_type=refresh_token`), then re-calls `GET /api/users/me` (system-design §3.1)
