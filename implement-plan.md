@@ -72,9 +72,9 @@
 - [x] Verify: `npm run build` compiles
 
 ### 1.7 Backend — Validation Infrastructure (zod)
-- [ ] Add the `validate(schema)` middleware (`src/middleware/validate.ts`) — parses `req.body`/`req.query`, on failure returns `400` with `{ success: false, error: { code: "VALIDATION_ERROR", message, details } }`
-- [ ] Auth has no request-body schemas — the OIDC code exchange happens client-side against Zitadel (system-design §3.1); `logout` takes no body
-- [ ] Verify: `npm run build` compiles
+- [x] Add the `validate(schema)` middleware (`src/common/middleware/validate.ts`) — parses `req.body`/`req.query`, on failure returns `400` with `{ success: false, error: { code: "VALIDATION_ERROR", message, details } }`
+- [x] Auth has no request-body schemas — the OIDC code exchange happens client-side against Zitadel (system-design §3.1); `logout` takes no body
+- [x] Verify: `npm run build` compiles
 
 ### 1.8 Backend — Token Validation Middleware (Zitadel JWKS)
 - [ ] Create `src/utils/oidc.ts` — fetch Zitadel `.well-known/openid-configuration`, cache `jwks_uri`, build `createRemoteJWKSet(keys)` with `jose`
