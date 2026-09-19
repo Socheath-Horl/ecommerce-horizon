@@ -66,10 +66,10 @@
 - [ ] ~~swagger-jsdoc / swagger-ui-express~~ — superseded: user wants **true auto-generation** (spec derived from code, zero JSDoc). Revisit this task once routes exist in Phase 2, likely via **tsoa** (auto-gen from TS types) + `@scalar/api-reference` renderer at `/api/docs`. Skip swagger-ui-express when revived — Scalar already renders.
 
 ### 1.6 Backend — Auth Structure (Zitadel OIDC)
-- [ ] Create `AuthService` (`src/modules/auth/auth.service.ts`) — loads Zitadel OIDC discovery, builds the SPA config payload, upserts users from verified token claims
-- [ ] Create auth controller (`src/modules/auth/auth.controller.ts`) — `express.Router()` with the `/config`, `/logout` handlers
-- [ ] Mount the controller at `/api/auth` in `src/app.ts`
-- [ ] Verify: `npm run build` compiles
+- [x] Create `AuthService` (`src/modules/auth/auth.service.ts`) — loads Zitadel OIDC discovery, builds the SPA config payload, upserts users from verified token claims
+- [x] Create auth controller (`src/modules/auth/auth.controller.ts`) — `express.Router()` with the `/config`, `/logout` handlers
+- [x] Mount the controller at `/api/auth` in `src/app.ts`
+- [x] Verify: `npm run build` compiles
 
 ### 1.7 Backend — Validation Infrastructure (zod)
 - [ ] Add the `validate(schema)` middleware (`src/middleware/validate.ts`) — parses `req.body`/`req.query`, on failure returns `400` with `{ success: false, error: { code: "VALIDATION_ERROR", message, details } }`

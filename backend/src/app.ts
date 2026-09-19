@@ -3,6 +3,7 @@ import cors, { type CorsOptions } from 'cors';
 import express from 'express';
 import { error_handler, not_found_handler } from '@/common/filters/error.filter';
 import { env } from '@/config/env';
+import { AuthController } from '@/modules/auth/auth.controller';
 import { HealthController } from '@/modules/health/health.controller';
 
 const api_prefix = `/${env.api_prefix}`;
@@ -20,6 +21,7 @@ app.use(cors(cors_options));
 app.use(express.json());
 
 app.use(`${api_prefix}/health`, HealthController.routes());
+app.use(`${api_prefix}/auth`, AuthController.routes());
 
 app.use(not_found_handler);
 app.use(error_handler);
