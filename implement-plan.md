@@ -111,17 +111,17 @@
 - [ ] Verify: password reset works in Zitadel's end-user UI only → **pending manual SPA client step** (no token round-trip yet)
 
 ### 1.14 Backend — Profile Endpoint (lazy user upsert)
-- [ ] Implement `get_profile()` in AuthService — upsert `users` from verified token claims on first contact: `id = sub`, `email`/`name` from claims, `role = CUSTOMER` default
-- [ ] Return current user data (id, name, email, phone, avatar, role, addresses)
-- [ ] Add GET `/api/users/me` route in `src/modules/users/users.controller.ts` (per system-design §3.8; `require_auth`, uses `req.user`)
+- [x] Implement `get_profile()` in `UsersService` (`src/modules/users/users.service.ts`) — upsert `users` from verified token claims on first contact: `id = sub`, `email`/`name` from claims, `role = CUSTOMER` default (no addresses table yet — `addresses: []` placeholder, real CRUD in the profile phase)
+- [x] Return current user data (id, name, email, phone, avatar, role, addresses) — avatar joined from `files` via `users.avatar_id`
+- [x] Add GET `/api/users/me` route in `src/modules/users/users.controller.ts` (per system-design §3.8; `require_auth`, uses `req.user`)
 - [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): GET /api/users/me (bearer security, 200, 401)
-- [ ] Verify: Profile returns current user data; a brand-new Zitadel user gets a `users` row (role CUSTOMER)
+- [ ] Verify: Profile returns current user data; a brand-new Zitadel user gets a `users` row (role CUSTOMER) → **pending manual SPA client step** (needs a real Zitadel token — the 401 path works now, live-checked below)
 
 ### 1.15 Backend — Auth Error Handling
-- [ ] Return 401 for missing/invalid/expired Zitadel access token (require_auth)
-- [ ] Return 403 for insufficient role (require_role)
-- [ ] Add the global error-handling middleware (`src/common/middleware/error.ts`) that shapes every error as `{ success: false, error: { code, message, details } }` (404 fallback included)
-- [ ] Verify: All auth error cases return correct status codes
+- [x] Return 401 for missing/invalid/expired Zitadel access token (require_auth)
+- [x] Return 403 for insufficient role (require_role)
+- [x] Add the global error-handling middleware that shapes every error as `{ success: false, error: { code, message, details } }` (404 fallback included) — built as `src/common/filters/error.filter.ts` during the restructure (plan's old path `src/common/middleware/error.ts` is superseded)
+- [x] Verify: 401 no-token on `/api/auth/logout`, `/api/users/me` ✅ (live-checked); 401 bogus-token on logout ✅ (1.11); 404 fallback via `not_found_handler`; 403 role case verifiable once a role-guarded route exists (§2.3) → 403 pending until the admin portal phase
 
 ### 1.16 Backend — MinIO Service
 - [x] Create MinIO client + service (`src/common/services/minio.service.ts`, `minio` client from env config)
