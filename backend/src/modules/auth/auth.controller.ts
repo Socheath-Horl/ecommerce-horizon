@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
+import { require_auth } from '@/common/middleware/auth';
 import { AuthService } from '@/modules/auth/auth.service';
 
 export class AuthController {
@@ -9,7 +10,7 @@ export class AuthController {
     const controller = new AuthController();
     return Router()
       .get('/config', (req, res) => void controller.config(req, res))
-      .post('/logout', (req, res) => void controller.logout(req, res));
+      .post('/logout', require_auth, (req, res) => void controller.logout(req, res));
   }
 
   async config(_req: Request, res: Response): Promise<void> {

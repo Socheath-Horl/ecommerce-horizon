@@ -84,9 +84,10 @@
 - [x] Verify: `npm run build` compiles
 
 ### 1.9 Backend — Route Protection
-- [ ] Apply `require_auth` to protected routes (cart, orders, profile, files)
-- [ ] Apply `require_role('USER', 'ADMIN')` to admin portal routes; `require_role('ADMIN')` to user management (§2.3)
-- [ ] Verify: `npm run build` compiles
+- [x] Apply `require_auth` to `POST /api/auth/logout` (only existing protected route at this phase)
+- [ ] Apply `require_auth` to cart/orders/profile/files routes — **carried into each phase** as those routes are created (1.14, 1.17, 5.1, 6.3, 7.1)
+- [ ] Apply `require_role('USER', 'ADMIN')` admin portal + `require_role('ADMIN')` user mgmt — **carried into §2.3 / §9.1**
+- [x] Verify: `npm run build` compiles
 
 ### 1.10 Backend — OIDC Config Endpoint
 - [ ] Implement `get_config()` in AuthService — returns issuer, client_id, redirect_uri, scopes, end_session_uri (from env + cached discovery) so the SPA never hardcodes OIDC settings
