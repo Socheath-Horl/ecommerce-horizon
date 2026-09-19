@@ -23,7 +23,7 @@
 
 - Each feature lives in `src/modules/<feature>/`: `*.controller.ts` (routes + req/res mapping), `*.service.ts` (business logic), `*.dto.ts` (zod schemas)
 - Controllers expose `static routes(): Router`; services are constructed manually (no DI container)
-- `src/common/` holds cross-cutting concerns: `filters/` (error handlers), `middleware/` (validate, require_auth, require_role), `interceptors/`
+- `src/common/` holds cross-cutting concerns: `filters/` (error handlers), `middleware/` (validate, require_auth, require_role), `interceptors/`, `services/` (shared infra such as MinIO)
 - `src/app.ts` = root module (global middleware + mounting); `src/index.ts` = bootstrap
 
 ## Rules

@@ -119,11 +119,11 @@
 ### 1.15 Backend — Auth Error Handling
 - [ ] Return 401 for missing/invalid/expired Zitadel access token (require_auth)
 - [ ] Return 403 for insufficient role (require_role)
-- [ ] Add the global error-handling middleware (`src/middleware/error.ts`) that shapes every error as `{ success: false, error: { code, message, details } }` (404 fallback included)
+- [ ] Add the global error-handling middleware (`src/common/middleware/error.ts`) that shapes every error as `{ success: false, error: { code, message, details } }` (404 fallback included)
 - [ ] Verify: All auth error cases return correct status codes
 
 ### 1.16 Backend — MinIO Service
-- [ ] Create MinIO client + service (`src/services/minio.service.ts`, `minio` client from env config)
+- [ ] Create MinIO client + service (`src/common/services/minio.service.ts`, `minio` client from env config)
 - [ ] Ensure bucket + public-read policy on startup
 - [ ] Implement `upload_file(buffer, meta)` → object key + URL
 - [ ] Implement `delete_file(bucket, key)`
