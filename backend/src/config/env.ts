@@ -6,4 +6,10 @@ export const env = {
   zitadel_issuer: process.env.ZITADEL_ISSUER ?? 'http://localhost:8080',
   zitadel_client_id: process.env.ZITADEL_CLIENT_ID ?? '',
   zitadel_redirect_uri: process.env.ZITADEL_REDIRECT_URI ?? 'http://localhost:5173/auth/callback',
+  minio_endpoint: process.env.MINIO_ENDPOINT ?? 'localhost',
+  minio_port: Number(process.env.MINIO_PORT ?? 9000),
+  minio_access_key: process.env.MINIO_ACCESS_KEY ?? 'minioadmin',
+  minio_secret_key: process.env.MINIO_SECRET_KEY ?? 'minioadmin',
+  minio_bucket: process.env.MINIO_BUCKET ?? 'ecommerce',
+  minio_use_ssl: process.env.MINIO_USE_SSL === 'true',
 };

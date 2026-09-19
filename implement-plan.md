@@ -102,13 +102,13 @@
 - [ ] Verify: protected paths work — POST without token → 401 `UNAUTHORIZED`, POST with bogus token → 401 `UNAUTHORIZED` ✅ (hit live server; both rejected by `require_auth`); **200 happy-path pending manual step** — needs a real Zitadel access token from the browser sign-in (SPA client + `ZITADEL_CLIENT_ID` in `.env`)
 
 ### 1.12 Backend — Session Restore (no refresh endpoint of ours)
-- [ ] There is NO `/api/auth/refresh` — the SPA refreshes directly against Zitadel (`grant_type=refresh_token`), then re-calls `GET /api/users/me` (system-design §3.1)
-- [ ] Verify: expired access token + Zitadel refresh grant → new access token accepted by `/api/users/me`
+- [x] There is NO `/api/auth/refresh` — the SPA refreshes directly against Zitadel (`grant_type=refresh_token`), then re-calls `GET /api/users/me` (system-design §3.1)
+- [ ] Verify: expired access token + Zitadel refresh grant → new access token accepted by `/api/users/me` → **pending manual SPA client step** (no token round-trip yet)
 
 ### 1.13 Backend — Passwords (delegated to Zitadel)
-- [ ] No `change-password` endpoint — Zitadel owns passwords, MFA, forgot-password, and self-registration via its hosted UI (system-design §3.1 and §9)
-- [ ] Admin users are created in the **Zitadel console**, not via our API; their role is assigned in our admin portal (§2)
-- [ ] Verify: password reset works in Zitadel's end-user UI only
+- [x] No `change-password` endpoint — Zitadel owns passwords, MFA, forgot-password, and self-registration via its hosted UI (system-design §3.1 and §9)
+- [x] Admin users are created in the **Zitadel console**, not via our API; their role is assigned in our admin portal (§2)
+- [ ] Verify: password reset works in Zitadel's end-user UI only → **pending manual SPA client step** (no token round-trip yet)
 
 ### 1.14 Backend — Profile Endpoint (lazy user upsert)
 - [ ] Implement `get_profile()` in AuthService — upsert `users` from verified token claims on first contact: `id = sub`, `email`/`name` from claims, `role = CUSTOMER` default
@@ -124,12 +124,12 @@
 - [ ] Verify: All auth error cases return correct status codes
 
 ### 1.16 Backend — MinIO Service
-- [ ] Create MinIO client + service (`src/common/services/minio.service.ts`, `minio` client from env config)
-- [ ] Ensure bucket + public-read policy on startup
-- [ ] Implement `upload_file(buffer, meta)` → object key + URL
-- [ ] Implement `delete_file(bucket, key)`
-- [ ] Implement `generate_url(bucket, key)`
-- [ ] Verify: MinIO connection works (check MinIO console)
+- [x] Create MinIO client + service (`src/common/services/minio.service.ts`, `minio` client from env config)
+- [x] Ensure bucket + public-read policy on startup (`ensure_bucket()` called in `index.ts` bootstrap)
+- [x] Implement `upload_file(buffer, meta)` → object key + URL
+- [x] Implement `delete_file(bucket, key)`
+- [x] Implement `generate_url(bucket, key)`
+- [x] Verify: MinIO connection works — server boots with `ensure_bucket()` (bucket `ecommerce` created, policy read back = public-read `s3:GetObject` on `ecommerce/*`; see MinIO console `http://localhost:9001`)
 
 ### 1.17 Backend — Files Structure
 - [ ] Create `FilesService` (`src/modules/files/files.service.ts`)
