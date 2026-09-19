@@ -90,10 +90,10 @@
 - [x] Verify: `npm run build` compiles
 
 ### 1.10 Backend — OIDC Config Endpoint
-- [ ] Implement `get_config()` in AuthService — returns issuer, client_id, redirect_uri, scopes, end_session_uri (from env + cached discovery) so the SPA never hardcodes OIDC settings
-- [ ] Add GET `/api/auth/config` route in `auth.controller.ts` (public)
+- [x] Implement `get_config()` in AuthService — returns issuer, client_id, redirect_uri, scopes, end_session_uri (from env + cached discovery) so the SPA never hardcodes OIDC settings
+- [x] Add GET `/api/auth/config` route in `auth.controller.ts` (public)
 - [ ] OpenAPI doc for GET /api/auth/config → **deferred with 1.5.5** (tsoa auto-gen)
-- [ ] Verify: `GET /api/auth/config` returns the SPA settings; complete a browser sign-in round-trip (authorize redirect → Zitadel → code exchange → /users/me)
+- [ ] Verify: `GET /api/auth/config` returns the SPA settings ✅ (Zitadel v4 running on :8080, discovery fetched, real `end_session_uri` returned); **browser sign-in round-trip pending manual step** — create SPA client in Zitadel console (`http://localhost:8080/ui/console`), set real `ZITADEL_CLIENT_ID` in `.env`, then complete authorize → code → /users/me (that last hop needs 1.14 too)
 
 ### 1.11 Backend — Logout Endpoint
 - [ ] Implement `logout()` in AuthService — stateless: validate the session exists (`require_auth`), return OK
