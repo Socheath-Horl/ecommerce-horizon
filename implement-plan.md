@@ -62,8 +62,13 @@
 - [x] Run seed (`npm run db:seed`)
 - [x] Verify: data check (categories = 4, products = 10, admin = ADMIN)
 
-### 1.5.5 Backend — OpenAPI Docs (Scalar UI) — DEFERRED
-- [ ] ~~swagger-jsdoc / swagger-ui-express~~ — superseded: user wants **true auto-generation** (spec derived from code, zero JSDoc). Revisit this task once routes exist in Phase 2, likely via **tsoa** (auto-gen from TS types) + `@scalar/api-reference` renderer at `/api/docs`. Skip swagger-ui-express when revived — Scalar already renders.
+### 1.5.5 Backend — OpenAPI Docs (Scalar UI)
+- [x] ~~swagger-jsdoc / swagger-ui-express~~ — **removed** (no JSDoc, no old UI)
+- [x] Generator: ~~tsoa~~ (blocked — TypeScript 7 native compiler has **no `createProgram` compiler API**, which tsoa requires) → **`@asteasolutions/zod-to-openapi`** v9: spec auto-derived from the `*.dto.ts` zod schemas our `validate` middleware already uses — one source of truth, zero JSDoc, TS7-safe
+- [x] Renderer: `@scalar/express-api-reference` at `GET /api/docs` (raw spec at `GET /api/docs/openapi.json`)
+- [x] Registry: `src/api_docs/registry.ts` — bearer security scheme + one `registerPath` per endpoint (health, auth config, logout, users/me today); grows route-by-route in later phases, still schema-bound
+- [x] Verify: build passes; booted server → `/api/docs/openapi.json` 200 with all 4 paths, `/api/docs` renders Scalar UI
+- [x] Superseded deps `swagger-jsdoc`/`swagger-ui-express` removed (see 1.2); `tsoa` pinned as **not usable** with TS7 until it supports the native compiler
 
 ### 1.6 Backend — Auth Structure (Zitadel OIDC)
 - [x] Create `AuthService` (`src/modules/auth/auth.service.ts`) — loads Zitadel OIDC discovery, builds the SPA config payload, stateless logout (no user upsert here — that's 1.14)
