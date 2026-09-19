@@ -1776,28 +1776,36 @@ mc anonymous set public local/ecommerce
 ```
 
 ### Local Zitadel Setup (self-hosted, Docker)
+> **Zitadel v4+** (image `ghcr.io/zitadel/zitadel:latest`). Two gotchas vs. older docs: there is no `--setup` flag anymore — use `start-from-init`; and inside the container `localhost` is the container itself, so the Postgres host must be `host.docker.internal`.
+
 ```bash
-# Start PostgreSQL (required by Zitadel — use existing local instance or separate container)
-# Then start Zitadel
+# 1. Create the Zitadel role + database on your local Postgres (run once) — start-from-init will NOT create them itself when using a DSN
+docker exec postgres psql -U postgres -c "CREATE ROLE zitadel LOGIN PASSWORD 'zitadel' SUPERUSER;"
+docker exec postgres psql -U postgres -c "CREATE DATABASE zitadel OWNER zitadel;"
+
+# 2. Start Zitadel (v4 — the masterkey MUST be supplied via --masterkeyFromEnv + ZITADEL_MASTERKEY)
 docker run -d --name zitadel \
   -p 8080:8080 \
   --hostname zitadel \
-  -e ZITADEL_DATABASE_POSTGRES_HOST=localhost \
-  -e ZITADEL_DATABASE_POSTGRES_PORT=5432 \
-  -e ZITADEL_DATABASE_POSTGRES_USER=zitadel \
-  -e ZITADEL_DATABASE_POSTGRES_PASSWORD=zitadel \
-  -e ZITADEL_DATABASE_POSTGRES_DATABASE=zitadel \
+  -e ZITADEL_MASTERKEY=MasterkeyNeedsToHave32Characters \
+  -e ZITADEL_DATABASE_POSTGRES_DSN="postgresql://zitadel:zitadel@host.docker.internal:5432/zitadel?sslmode=disable" \
   -e ZITADEL_EXTERNALSECURE=false \
   -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME=admin \
   -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD=Admin123! \
-  ghcr.io/zitadel/zitadel:latest
+  ghcr.io/zitadel/zitadel:latest start-from-init --masterkeyFromEnv --tlsMode disabled
 
-# Console: http://localhost:8080/ui/console
-# 1. Create project → add application (OIDC SPA)
-# 2. Set redirect URI to http://localhost:5173/auth/callback
-# 3. Copy the Client ID (SPA application) → set as ZITADEL_CLIENT_ID in backend .env
-# 4. No client secret needed — SPA uses PKCE (public client)
-# 5. Disable PKCE requirement if Zitadel defaults require it: Project → App → OIDC → PKCE
+# 3. Wait until discovery responds (first boot runs DB migrations, takes a minute+)
+Invoke-WebRequest -Uri 'http://localhost:8080/.well-known/openid-configuration' -UseBasicParsing  # → 200
+
+# 4. Console: http://localhost:8080/ui/console  (sign in admin / Admin123!)
+#    1. Create project → add application (OIDC, application type SPA)
+#    2. Set redirect URI to http://localhost:5173/auth/callback
+#    3. Copy the Client ID (SPA application) → set as ZITADEL_CLIENT_ID in backend .env
+#    4. No client secret needed — SPA uses PKCE (public client)
+
+# Stop / remove later (data lives in Postgres — safe to recreate)
+docker stop zitadel
+docker rm -f zitadel
 ```
 
 ---
