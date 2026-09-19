@@ -31,7 +31,7 @@
 - [x] Install `zod` (validation) and `dotenv`
 - [x] Install `cors`
 - [x] Install `minio`, `multer` + `@types/multer`
-- [x] Install `swagger-jsdoc`, `swagger-ui-express` + `@types/swagger-jsdoc`, `@types/swagger-ui-express` (OpenAPI, §1.5.5)
+- [x] Install `swagger-jsdoc`, `swagger-ui-express` + `@types/swagger-jsdoc`, `@types/swagger-ui-express` (OpenAPI, §1.5.5) — installed in 1.1 but now **superseded (1.5.5 deferred → tsoa); consider removing these deps when tsoa lands**
 - [x] Configure scripts in `package.json` (`dev` = `tsx watch`, `build` = `tsc`, `db:generate`, `db:migrate`, `db:seed`, `db:push`)
 - [x] Create `.env` + `.env.example` with all environment variables
 - [x] Bootstrap Express app in `src/index.ts` (dotenv, `cors`, JSON body, `/api` prefix, 404 + error middleware)
@@ -66,7 +66,8 @@
 - [ ] ~~swagger-jsdoc / swagger-ui-express~~ — superseded: user wants **true auto-generation** (spec derived from code, zero JSDoc). Revisit this task once routes exist in Phase 2, likely via **tsoa** (auto-gen from TS types) + `@scalar/api-reference` renderer at `/api/docs`. Skip swagger-ui-express when revived — Scalar already renders.
 
 ### 1.6 Backend — Auth Structure (Zitadel OIDC)
-- [x] Create `AuthService` (`src/modules/auth/auth.service.ts`) — loads Zitadel OIDC discovery, builds the SPA config payload, upserts users from verified token claims
+- [x] Create `AuthService` (`src/modules/auth/auth.service.ts`) — loads Zitadel OIDC discovery, builds the SPA config payload, stateless logout (no user upsert here — that's 1.14)
+- [x] Create `src/utils/oidc.ts` — cached OIDC discovery fetcher (shared by AuthService here; JWKS extension lands in 1.8)
 - [x] Create auth controller (`src/modules/auth/auth.controller.ts`) — `express.Router()` with the `/config`, `/logout` handlers
 - [x] Mount the controller at `/api/auth` in `src/app.ts`
 - [x] Verify: `npm run build` compiles
@@ -77,7 +78,7 @@
 - [x] Verify: `npm run build` compiles
 
 ### 1.8 Backend — Token Validation Middleware (Zitadel JWKS)
-- [x] Create `src/utils/oidc.ts` — fetch Zitadel `.well-known/openid-configuration`, cache `jwks_uri`, build `createRemoteJWKSet(keys)` with `jose`
+- [x] Extend `src/utils/oidc.ts` — cache `jwks_uri`, build `createRemoteJWKSet(keys)` with `jose`, `verify_access_token()` helper (discovery itself was created in 1.6)
 - [x] Create `require_auth` middleware (`src/common/middleware/auth.ts`): verify `Authorization: Bearer <token>` with `jwtVerify` (+ `issuer`, `audience` = `ZITADEL_CLIENT_ID`), attach `req.user` = `{ id, email, name }` from claims (`id` = `sub`); else `401 UNAUTHORIZED`
 - [x] Create `require_role(...roles)` middleware factory — looks up `req.user.role` in DB against allowed roles; else `403 FORBIDDEN`
 - [x] Verify: `npm run build` compiles
@@ -90,13 +91,13 @@
 ### 1.10 Backend — OIDC Config Endpoint
 - [ ] Implement `get_config()` in AuthService — returns issuer, client_id, redirect_uri, scopes, end_session_uri (from env + cached discovery) so the SPA never hardcodes OIDC settings
 - [ ] Add GET `/api/auth/config` route in `auth.controller.ts` (public)
-- [ ] OpenAPI: `@swagger` JSDoc on GET /api/auth/config (200 success with the data payload)
+- [ ] OpenAPI doc for GET /api/auth/config → **deferred with 1.5.5** (tsoa auto-gen)
 - [ ] Verify: `GET /api/auth/config` returns the SPA settings; complete a browser sign-in round-trip (authorize redirect → Zitadel → code exchange → /users/me)
 
 ### 1.11 Backend — Logout Endpoint
 - [ ] Implement `logout()` in AuthService — stateless: validate the session exists (`require_auth`), return OK
 - [ ] Add POST `/api/auth/logout` route in `auth.controller.ts` (`require_auth`-protected)
-- [ ] OpenAPI: `@swagger` JSDoc on POST /api/auth/logout (bearer security, 200, 401)
+- [ ] OpenAPI doc for POST /api/auth/logout → **deferred with 1.5.5** (tsoa auto-gen)
 - [ ] Verify: Logout returns 200; the SPA then clears storage and redirects to Zitadel's `end_session` endpoint (system-design §3.1)
 
 ### 1.12 Backend — Session Restore (no refresh endpoint of ours)
@@ -112,7 +113,7 @@
 - [ ] Implement `get_profile()` in AuthService — upsert `users` from verified token claims on first contact: `id = sub`, `email`/`name` from claims, `role = CUSTOMER` default
 - [ ] Return current user data (id, name, email, phone, avatar, role, addresses)
 - [ ] Add GET `/api/users/me` route in `src/modules/users/users.controller.ts` (per system-design §3.8; `require_auth`, uses `req.user`)
-- [ ] OpenAPI: `@swagger` JSDoc on GET /api/users/me (bearer security, 200, 401)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): GET /api/users/me (bearer security, 200, 401)
 - [ ] Verify: Profile returns current user data; a brand-new Zitadel user gets a `users` row (role CUSTOMER)
 
 ### 1.15 Backend — Auth Error Handling
@@ -140,21 +141,21 @@
 - [ ] Use simple `multer` memory storage (`upload.single('file')`)
 - [ ] Save file record in database (`db.insert(files)`)
 - [ ] Return file data
-- [ ] OpenAPI: `@swagger` JSDoc on POST /api/files/upload (consumes multipart/form-data, body schema, 201)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): POST /api/files/upload (consumes multipart/form-data, body schema, 201)
 - [ ] Verify: Upload image via API, check MinIO + DB
 
 ### 1.19 Backend — File List Endpoint
 - [ ] Implement GET `/api/files` endpoint
 - [ ] Filter by entity_type and entity_id in query
 - [ ] Return list of files
-- [ ] OpenAPI: `@swagger` JSDoc on GET /api/files (query params, 200)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): GET /api/files (query params, 200)
 - [ ] Verify: List files for an entity
 
 ### 1.20 Backend — File Delete Endpoint
 - [ ] Implement DELETE `/api/files/:id` endpoint
 - [ ] Delete from MinIO
 - [ ] Delete record from database
-- [ ] OpenAPI: `@swagger` JSDoc on DELETE /api/files/:id (path param, 200, 404)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): DELETE /api/files/:id (path param, 200, 404)
 - [ ] Verify: Delete removes from MinIO + DB
 
 ### 1.21 Backend — File Link/Unlink Endpoints
@@ -162,7 +163,7 @@
 - [ ] Link file to entity (entity_type + entity_id)
 - [ ] Implement PUT `/api/files/:id/unlink` endpoint (PUT per dev preference)
 - [ ] Unlink file from entity
-- [ ] OpenAPI: `@swagger` JSDoc on PUT /api/files/:id/link|unlink (body schema, 200)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): PUT /api/files/:id/link|unlink (body schema, 200)
 - [ ] Verify: Link/unlink works correctly
 
 ### 1.22 Frontend — Vite Project
@@ -259,7 +260,7 @@
 - [ ] Add filter by role
 - [ ] Return users with total count and order count
 - [ ] Add GET `/api/admin/users` route (ADMIN only, `require_role('ADMIN')` + `validate(query_schema, 'query')`)
-- [ ] OpenAPI: `@swagger` JSDoc on GET /api/admin/users (bearer security, 200, 403)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): GET /api/admin/users (bearer security, 200, 403)
 - [ ] Verify: Admin can list users
 
 ### 2.4 Backend — Admin Update Role Endpoint
@@ -268,7 +269,7 @@
 - [ ] Prevent self-role change
 - [ ] Add PUT `/api/admin/users/:id/role` route (ADMIN only)
 - [ ] Apply `require_role('ADMIN')`
-- [ ] OpenAPI: `@swagger` JSDoc on PUT /api/admin/users/:id/role (bearer security, body `update_role_schema`, 200, 400, 401, 403, 404)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): PUT /api/admin/users/:id/role (bearer security, body `update_role_schema`, 200, 400, 401, 403, 404)
 - [ ] Verify: Admin can change user role
 
 ### 2.5 Backend — Admin User Error Handling
@@ -377,14 +378,14 @@
 - [ ] Auto-generate slug from name
 - [ ] Check for duplicate name
 - [ ] Add POST `/api/categories` route (admin only, `require_role('USER', 'ADMIN')`)
-- [ ] OpenAPI: `@swagger` JSDoc on POST /api/categories (bearer security, body `create_category_schema`, 201, 400, 401, 403, 404, 409)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): POST /api/categories (bearer security, body `create_category_schema`, 201, 400, 401, 403, 404, 409)
 - [ ] Verify: Admin can create category
 
 ### 3.5 Backend — List Categories Endpoint
 - [ ] Implement `find_all()` in CategoriesService
 - [ ] Return all categories (public)
 - [ ] Add GET `/api/categories` route
-- [ ] OpenAPI: `@swagger` JSDoc on GET /api/categories (200)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): GET /api/categories (200)
 - [ ] Verify: Categories list returns data
 
 ### 3.6 Backend — Update Category Endpoint
@@ -392,7 +393,7 @@
 - [ ] Check category exists
 - [ ] Update slug if name changes
 - [ ] Add PATCH `/api/categories/:id` route (admin only, `require_role('USER', 'ADMIN')`)
-- [ ] OpenAPI: `@swagger` JSDoc on PATCH /api/categories/:id (bearer security, body `update_category_schema`, 200, 400, 401, 403, 404, 409)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): PATCH /api/categories/:id (bearer security, body `update_category_schema`, 200, 400, 401, 403, 404, 409)
 - [ ] Verify: Admin can update category
 
 ### 3.7 Backend — Delete Category Endpoint
@@ -400,7 +401,7 @@
 - [ ] Check for products in category
 - [ ] Prevent delete if products exist
 - [ ] Add DELETE `/api/categories/:id` route (admin only, `require_role('USER', 'ADMIN')`)
-- [ ] OpenAPI: `@swagger` JSDoc on DELETE /api/categories/:id (bearer security, 200, 401, 403, 404, 409)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): DELETE /api/categories/:id (bearer security, 200, 401, 403, 404, 409)
 - [ ] Verify: Admin can delete category (if no products)
 
 ### 3.8 Backend — Products Structure
@@ -434,7 +435,7 @@
 - [ ] Validate category exists
 - [ ] Create product in database
 - [ ] Add POST `/api/products` route (admin only, `require_role('USER', 'ADMIN')`)
-- [ ] OpenAPI: `@swagger` JSDoc on POST /api/products (bearer security, body `create_product_schema`, 201, 400, 401, 403, 404, 409)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): POST /api/products (bearer security, body `create_product_schema`, 201, 400, 401, 403, 404, 409)
 - [ ] Verify: Admin can create product
 
 ### 3.13 Backend — List Products Endpoint
@@ -444,14 +445,14 @@
 - [ ] Add sorting (price_asc, price_desc, newest, popular)
 - [ ] Include category and images in response
 - [ ] Add GET `/api/products` route (public, `validate(query_products_schema, 'query')`)
-- [ ] OpenAPI: `@swagger` JSDoc on GET /api/products (200 + pagination payload)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): GET /api/products (200 + pagination payload)
 - [ ] Verify: Products list with filters works
 
 ### 3.14 Backend — Get Product Endpoint
 - [ ] Implement `find_by_slug()` in ProductsService
 - [ ] Include category and images
 - [ ] Add GET `/api/products/:slug` route (public)
-- [ ] OpenAPI: `@swagger` JSDoc on GET /api/products/:slug (path param slug, 200, 404)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): GET /api/products/:slug (path param slug, 200, 404)
 - [ ] Verify: Single product returns correctly
 
 ### 3.15 Backend — Update Product Endpoint
@@ -460,7 +461,7 @@
 - [ ] Validate category exists (if changing)
 - [ ] Update slug if name changes
 - [ ] Add PATCH `/api/products/:id` route (admin only, `require_role('USER', 'ADMIN')`)
-- [ ] OpenAPI: `@swagger` JSDoc on PATCH /api/products/:id (bearer security, body `update_product_schema`, 200, 400, 401, 403, 404)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): PATCH /api/products/:id (bearer security, body `update_product_schema`, 200, 400, 401, 403, 404)
 - [ ] Verify: Admin can update product
 
 ### 3.16 Backend — Delete Product Endpoint
@@ -469,7 +470,7 @@
 - [ ] Delete product images from MinIO
 - [ ] Delete product from database
 - [ ] Add DELETE `/api/products/:id` route (admin only, `require_role('USER', 'ADMIN')`)
-- [ ] OpenAPI: `@swagger` JSDoc on DELETE /api/products/:id (bearer security, 200, 401, 403, 404)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): DELETE /api/products/:id (bearer security, 200, 401, 403, 404)
 - [ ] Verify: Admin can delete product
 
 ### 3.17 Backend — Product Error Handling
@@ -651,7 +652,7 @@
 - [ ] Apply image filter
 - [ ] Generate thumbnails based on entity type
 - [ ] Save both original and thumbnails
-- [ ] OpenAPI: `@swagger` JSDoc on POST /api/files/upload (consumes multipart/form-data, 201)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): POST /api/files/upload (consumes multipart/form-data, 201)
 - [ ] Verify: Upload generates thumbnails
 
 ### 4.6 Backend — Multiple Upload Endpoint
@@ -659,7 +660,7 @@
 - [ ] Accept max 5 files (`upload.array('files', 5)`)
 - [ ] Validate each file (5MB limit, image types)
 - [ ] Return array of uploaded files
-- [ ] OpenAPI: `@swagger` JSDoc on POST /api/files/upload/multiple (consumes multipart/form-data, 201)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): POST /api/files/upload/multiple (consumes multipart/form-data, 201)
 - [ ] Verify: Multiple file upload works
 
 ### 4.7 Backend — File Validation
@@ -747,7 +748,7 @@
 - [ ] Check if item already in cart (increment quantity)
 - [ ] Create new cart item if not exists
 - [ ] Add POST `/api/cart` route (protected, `require_auth`)
-- [ ] OpenAPI: `@swagger` JSDoc on POST /api/cart (bearer security, body `add_to_cart_schema`, 201, 400, 401, 404, 409)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): POST /api/cart (bearer security, body `add_to_cart_schema`, 201, 400, 401, 404, 409)
 - [ ] Verify: Add to cart works
 
 ### 5.5 Backend — Get Cart Endpoint
@@ -756,7 +757,7 @@
 - [ ] Calculate subtotal per item
 - [ ] Calculate total
 - [ ] Add GET `/api/cart` route (protected, `require_auth`)
-- [ ] OpenAPI: `@swagger` JSDoc on GET /api/cart (bearer security, 200)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): GET /api/cart (bearer security, 200)
 - [ ] Verify: Get cart returns correct data
 
 ### 5.6 Backend — Update Cart Endpoint
@@ -765,14 +766,14 @@
 - [ ] Check stock availability
 - [ ] Update quantity
 - [ ] Add PATCH `/api/cart/:id` route (protected, `require_auth`)
-- [ ] OpenAPI: `@swagger` JSDoc on PATCH /api/cart/:id (bearer security, body `update_cart_schema`, 200, 400, 401, 403, 404, 409)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): PATCH /api/cart/:id (bearer security, body `update_cart_schema`, 200, 400, 401, 403, 404, 409)
 - [ ] Verify: Update quantity works
 
 ### 5.7 Backend — Remove from Cart Endpoint
 - [ ] Implement `remove_from_cart()` in CartService
 - [ ] Delete cart item
 - [ ] Add DELETE `/api/cart/:id` route (protected, `require_auth`)
-- [ ] OpenAPI: `@swagger` JSDoc on DELETE /api/cart/:id (bearer security, 200, 401, 403, 404)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): DELETE /api/cart/:id (bearer security, 200, 401, 403, 404)
 - [ ] Verify: Remove from cart works
 
 ### 5.8 Backend — Cart Validation
@@ -894,7 +895,7 @@
 - [ ] Validate cart is not empty, items in stock before creating order
 - [ ] Implement `POST /api/checkout/create-session` — accepts `{ order_id }`, verifies order is the user's own `PENDING`, calls Stripe service, returns `data.url`
 - [ ] Add routes (protected, `require_auth`)
-- [ ] OpenAPI: `@swagger` JSDoc on POST /api/orders + POST /api/checkout/create-session (bearer security, 201, 400, 401, 404, 409)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): POST /api/orders + POST /api/checkout/create-session (bearer security, 201, 400, 401, 404, 409)
 - [ ] Verify: `POST /api/orders` + `create-session` produce a Stripe checkout URL
 
 ### 6.6 Backend — Stripe Webhook Handler
@@ -907,7 +908,7 @@
 - [ ] Decrement product stock
 - [ ] Clear user cart
 - [ ] Add POST `/api/webhook/stripe` route
-- [ ] OpenAPI: `@swagger` JSDoc on POST /api/webhook/stripe (raw body, 200, 400)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): POST /api/webhook/stripe (raw body, 200, 400)
 - [ ] Verify: Webhook processes correctly
 
 ### 6.7 Backend — Checkout Validation
@@ -997,7 +998,7 @@
 - [ ] Include order items
 - [ ] Add pagination
 - [ ] Add GET `/api/orders` route (protected, `require_auth`)
-- [ ] OpenAPI: `@swagger` JSDoc on GET /api/orders (bearer security, 200)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): GET /api/orders (bearer security, 200)
 - [ ] Verify: User can list their orders
 
 ### 7.4 Backend — Get Order Endpoint
@@ -1005,7 +1006,7 @@
 - [ ] Include order items and payment
 - [ ] Verify user owns the order
 - [ ] Add GET `/api/orders/:id` route (protected, `require_auth`)
-- [ ] OpenAPI: `@swagger` JSDoc on GET /api/orders/:id (bearer security, 200, 401, 403, 404)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): GET /api/orders/:id (bearer security, 200, 401, 403, 404)
 - [ ] Verify: User can get order detail
 
 ### 7.5 Backend — Admin Update Order Status Endpoint
@@ -1014,7 +1015,7 @@
 - [ ] Enforce legal transitions (PENDING→PAID|CANCELLED, PAID→SHIPPED|CANCELLED, SHIPPED→DELIVERED|CANCELLED) — `400 Invalid status transition`
 - [ ] Update order status
 - [ ] Add PATCH `/api/admin/orders/:id/status` route (admin only, `require_role('USER', 'ADMIN')`)
-- [ ] OpenAPI: `@swagger` JSDoc on PATCH /api/admin/orders/:id/status (bearer security, body `update_order_status_schema`, 200, 400, 401, 403, 404)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): PATCH /api/admin/orders/:id/status (bearer security, body `update_order_status_schema`, 200, 400, 401, 403, 404)
 - [ ] Verify: Admin can update order status
 
 ### 7.6 Backend — Address Table
@@ -1028,7 +1029,7 @@
 - [ ] Implement `update_profile()` in UsersService
 - [ ] Add GET `/api/users/me` route (protected, `require_auth`)
 - [ ] Add PATCH `/api/users/me` route (protected, `require_auth`)
-- [ ] OpenAPI: `@swagger` JSDoc on GET/PATCH /api/users/me (bearer security, 200, 400, 401, 404)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): GET/PATCH /api/users/me (bearer security, 200, 400, 401, 404)
 - [ ] Verify: Profile get/update works
 
 ### 7.8 Backend — Address Endpoints
@@ -1037,7 +1038,7 @@
 - [ ] Implement `delete_address()` in UsersService
 - [ ] Implement `get_addresses()` in UsersService
 - [ ] Add address routes (protected, `require_auth`)
-- [ ] OpenAPI: `@swagger` JSDoc on /api/users/me/address CRUD (bearer security, 200/201, 400, 401, 403, 404)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): /api/users/me/address CRUD (bearer security, 200/201, 400, 401, 403, 404)
 - [ ] Verify: Address CRUD works
 
 ### 7.9 Frontend — Orders API (RTK Query)
@@ -1154,7 +1155,7 @@
 - [ ] Prevent duplicate reviews
 - [ ] Create review in database
 - [ ] Add POST `/api/products/:id/reviews` route (protected, `require_auth`)
-- [ ] OpenAPI: `@swagger` JSDoc on POST /api/products/:id/reviews (bearer security, body `create_review_schema`, 201, 400, 401, 403, 404, 409)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): POST /api/products/:id/reviews (bearer security, body `create_review_schema`, 201, 400, 401, 403, 404, 409)
 - [ ] Verify: Create review works
 
 ### 8.5 Backend — List Reviews Endpoint
@@ -1163,7 +1164,7 @@
 - [ ] Include images
 - [ ] Include user info (name only)
 - [ ] Add GET `/api/products/:id/reviews` route (public)
-- [ ] OpenAPI: `@swagger` JSDoc on GET /api/products/:id/reviews (200)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): GET /api/products/:id/reviews (200)
 - [ ] Verify: List reviews works
 
 ### 8.6 Backend — Delete Review Endpoint
@@ -1172,7 +1173,7 @@
 - [ ] Delete review images from MinIO
 - [ ] Delete review from database
 - [ ] Add DELETE `/api/reviews/:id` route (protected, `require_auth`)
-- [ ] OpenAPI: `@swagger` JSDoc on DELETE /api/reviews/:id (bearer security, 200, 401, 403, 404)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): DELETE /api/reviews/:id (bearer security, 200, 401, 403, 404)
 - [ ] Verify: Delete own review works
 
 ### 8.7 Backend — Review Validation
@@ -1271,7 +1272,7 @@
 - [ ] Get recent orders (last 10)
 - [ ] Calculate sales by day (revenue per day)
 - [ ] Add GET `/api/admin/stats` route (admin only, `require_role('USER', 'ADMIN')`)
-- [ ] OpenAPI: `@swagger` JSDoc on GET /api/admin/stats (bearer security, 200, 403)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): GET /api/admin/stats (bearer security, 200, 403)
 - [ ] Verify: Stats endpoint returns all fields
 
 ### 9.3 Backend — Admin Orders Endpoint
@@ -1281,7 +1282,7 @@
 - [ ] Add pagination (page, limit)
 - [ ] Add filters: status, date_from, date_to (ISO dates)
 - [ ] Add GET `/api/admin/orders` route (admin only, `require_role('USER', 'ADMIN')`)
-- [ ] OpenAPI: `@swagger` JSDoc on GET /api/admin/orders (bearer security, 200, 403)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): GET /api/admin/orders (bearer security, 200, 403)
 - [ ] Verify: Admin can list all orders with filters
 
 ### 9.4 Backend — Admin Products Endpoint
@@ -1291,7 +1292,7 @@
 - [ ] Add pagination (page, limit)
 - [ ] Add filters: search (by name), category_id, stock ("in_stock" | "out_of_stock" | "low")
 - [ ] Add GET `/api/admin/products` route (admin only, `require_role('USER', 'ADMIN')`)
-- [ ] OpenAPI: `@swagger` JSDoc on GET /api/admin/products (bearer security, 200, 403)
+- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): GET /api/admin/products (bearer security, 200, 403)
 - [ ] Verify: Admin can list all products with filters
 
 ### 9.5 Frontend — Admin API Updates
