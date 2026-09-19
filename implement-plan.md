@@ -77,10 +77,10 @@
 - [x] Verify: `npm run build` compiles
 
 ### 1.8 Backend — Token Validation Middleware (Zitadel JWKS)
-- [ ] Create `src/utils/oidc.ts` — fetch Zitadel `.well-known/openid-configuration`, cache `jwks_uri`, build `createRemoteJWKSet(keys)` with `jose`
-- [ ] Create `require_auth` middleware (`src/middleware/auth.ts`): verify `Authorization: Bearer <token>` with `jwtVerify` (+ `issuer`, `audience` = `ZITADEL_CLIENT_ID`), attach `req.user` = `{ id, email, name }` from claims (`id` = `sub`); else `401 UNAUTHORIZED`
-- [ ] Create `require_role(...roles)` middleware factory — looks up `req.user.role` in DB against allowed roles; else `403 FORBIDDEN`
-- [ ] Verify: `npm run build` compiles
+- [x] Create `src/utils/oidc.ts` — fetch Zitadel `.well-known/openid-configuration`, cache `jwks_uri`, build `createRemoteJWKSet(keys)` with `jose`
+- [x] Create `require_auth` middleware (`src/common/middleware/auth.ts`): verify `Authorization: Bearer <token>` with `jwtVerify` (+ `issuer`, `audience` = `ZITADEL_CLIENT_ID`), attach `req.user` = `{ id, email, name }` from claims (`id` = `sub`); else `401 UNAUTHORIZED`
+- [x] Create `require_role(...roles)` middleware factory — looks up `req.user.role` in DB against allowed roles; else `403 FORBIDDEN`
+- [x] Verify: `npm run build` compiles
 
 ### 1.9 Backend — Route Protection
 - [ ] Apply `require_auth` to protected routes (cart, orders, profile, files)

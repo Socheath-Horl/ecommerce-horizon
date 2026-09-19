@@ -1,3 +1,4 @@
+import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 import { env } from '@/config/env';
 
 export interface OidcDiscovery {
@@ -7,6 +8,7 @@ export interface OidcDiscovery {
 }
 
 let discovery_cache: OidcDiscovery | undefined;
+let jwks_cache: ReturnType<typeof createRemoteJWKSet> | undefined;
 
 export async function get_discovery(): Promise<OidcDiscovery> {
   if (!discovery_cache) {
@@ -16,4 +18,20 @@ export async function get_discovery(): Promise<OidcDiscovery> {
     discovery_cache = (await res.json()) as OidcDiscovery;
   }
   return discovery_cache;
+}
+
+export async function get_jwks() {
+  if (!jwks_cache) {
+    const discovery = await get_discovery();
+    jwks_cache = createRemoteJWKSet(new URL(discovery.jwks_uri));
+  }
+  return jwks_cache;
+}
+
+export async function verify_access_token(token: string): Promise<JWTPayload> {
+  const { payload } = await jwtVerify(token, await get_jwks(), {
+    issuer: env.zitadel_issuer,
+    audience: env.zitadel_client_id,
+  });
+  return payload;
 }
