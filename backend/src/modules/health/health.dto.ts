@@ -1,0 +1,1 @@
+// No request bodies today — GET /health is a public liveness probe with no input.
