@@ -1,2 +1,10 @@
-// No request bodies today — GET /auth/config is public, POST /auth/logout is stateless (require_auth).
-// The OIDC code exchange happens client-side against Zitadel (system-design §3.1), never in our API.
+import { z } from 'zod';
+
+// GET /auth/config response data
+export const auth_config_data_schema = z.object({
+  issuer: z.string(),
+  client_id: z.string(),
+  redirect_uri: z.string(),
+  scopes: z.array(z.string()),
+  end_session_uri: z.string(),
+});
