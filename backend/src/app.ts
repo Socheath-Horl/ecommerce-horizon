@@ -6,6 +6,7 @@ import { DocsController } from '@/api_docs/docs.controller';
 import { env } from '@/config/env';
 import { AuthController } from '@/modules/auth/auth.controller';
 import { HealthController } from '@/modules/health/health.controller';
+import { FilesController } from '@/modules/files/files.controller';
 import { UsersController } from '@/modules/users/users.controller';
 
 const api_prefix = `/${env.api_prefix}`;
@@ -25,6 +26,7 @@ app.use(express.json());
 app.use(`${api_prefix}/health`, HealthController.routes());
 app.use(`${api_prefix}/auth`, AuthController.routes());
 app.use(`${api_prefix}/users`, UsersController.routes());
+app.use(`${api_prefix}/files`, FilesController.routes());
 app.use(`${api_prefix}/docs`, DocsController.routes());
 
 app.use(not_found_handler);

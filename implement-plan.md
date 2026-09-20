@@ -137,10 +137,10 @@
 - [x] Verify: MinIO connection works — server boots with `ensure_bucket()` (bucket `ecommerce` created, policy read back = public-read `s3:GetObject` on `ecommerce/*`; see MinIO console `http://localhost:9001`)
 
 ### 1.17 Backend — Files Structure
-- [ ] Create `FilesService` (`src/modules/files/files.service.ts`)
-- [ ] Create files controller (`src/modules/files/files.controller.ts`)
-- [ ] Mount the controller at `/api/files` in `src/app.ts`
-- [ ] Verify: `npm run build` compiles
+- [x] Create `FilesService` (`src/modules/files/files.service.ts`)
+- [x] Create files controller (`src/modules/files/files.controller.ts`)
+- [x] Mount the controller at `/api/files` in `src/app.ts` (with `require_auth` at router level so every `/api/files/*` is protected)
+- [x] Verify: `npm run build` compiles; live `GET /api/files` without token → 401 `UNAUTHORIZED` (mounted + protected)
 
 ### 1.18 Backend — Basic File Upload Endpoint
 - [ ] Implement basic POST `/api/files/upload` endpoint (single file)
