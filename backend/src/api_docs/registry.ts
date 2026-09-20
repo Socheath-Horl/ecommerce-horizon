@@ -86,6 +86,31 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: 'post',
+  path: '/files/upload',
+  summary: 'Upload a file',
+  security: [{ bearer: [] }],
+  request: {
+    body: {
+      content: {
+        'multipart/form-data': {
+          schema: z.object({
+            file: z.any().openapi({ type: 'string', format: 'binary' }),
+            entity_type: z.string().optional(),
+            entity_id: z.string().optional(),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    201: { description: 'Uploaded', content: { 'application/json': { schema: response_schema(z.unknown()) } } },
+    400: { description: 'Validation error' },
+    401: { description: 'Unauthorized' },
+  },
+});
+
 function build_document() {
   const generator = new OpenApiGeneratorV31(registry.definitions);
   return generator.generateDocument({

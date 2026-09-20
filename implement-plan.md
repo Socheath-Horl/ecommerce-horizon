@@ -143,12 +143,12 @@
 - [x] Verify: `npm run build` compiles; live `GET /api/files` without token → 401 `UNAUTHORIZED` (mounted + protected)
 
 ### 1.18 Backend — Basic File Upload Endpoint
-- [ ] Implement basic POST `/api/files/upload` endpoint (single file)
-- [ ] Use simple `multer` memory storage (`upload.single('file')`)
-- [ ] Save file record in database (`db.insert(files)`)
-- [ ] Return file data
-- [ ] OpenAPI (deferred w/ 1.5.5 → tsoa auto-gen): POST /api/files/upload (consumes multipart/form-data, body schema, 201)
-- [ ] Verify: Upload image via API, check MinIO + DB
+- [x] Implement basic POST `/api/files/upload` endpoint (single file)
+- [x] Use simple `multer` memory storage (`upload.single('file')`, 5MB limit)
+- [x] Save file record in database (`db.insert(files)`) — FK on `user_id` verified (rejects bogus users)
+- [x] Return file data (201 with the created record)
+- [x] OpenAPI: registered in `src/api_docs/registry.ts` (multipart form-data, bearer, 201/400/401)
+- [x] Verify: 401 without token (route bound + protected); direct service call → MinIO object + public GET 200 `hello world` + DB row created; test data cleaned up (full browser upload pending real token)
 
 ### 1.19 Backend — File List Endpoint
 - [ ] Implement GET `/api/files` endpoint
