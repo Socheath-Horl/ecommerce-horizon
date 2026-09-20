@@ -149,6 +149,7 @@
 - [x] Return file data (201 with the created record)
 - [x] OpenAPI: registered in `src/api_docs/registry.ts` (multipart form-data, bearer, 201/400/401)
 - [x] Verify: 401 without token (route bound + protected); direct service call → MinIO object + public GET 200 `hello world` + DB row created; test data cleaned up (full browser upload pending real token)
+- [x] File validation (pulled forward from Phase 4.2): controller rejects non-image mime (jpeg/png/webp) or >5MB with clean `400 VALIDATION_ERROR` (multer's own errors would 500 — avoided by checking in `files.dto.ts` constants + controller); `validate(upload_meta_schema)` guards `entity_type` enum + `entity_id` uuid. Phase 4.1/4.2 middleware tasks obviated.
 
 ### 1.19 Backend — File List Endpoint
 - [ ] Implement GET `/api/files` endpoint

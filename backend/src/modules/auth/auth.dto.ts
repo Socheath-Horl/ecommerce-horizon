@@ -1,0 +1,2 @@
+// No request bodies today — GET /auth/config is public, POST /auth/logout is stateless (require_auth).
+// The OIDC code exchange happens client-side against Zitadel (system-design §3.1), never in our API.

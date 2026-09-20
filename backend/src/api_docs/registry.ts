@@ -1,5 +1,6 @@
 import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
+import { upload_meta_schema } from '@/modules/files/files.dto';
 
 extendZodWithOpenApi(z);
 
@@ -95,10 +96,8 @@ registry.registerPath({
     body: {
       content: {
         'multipart/form-data': {
-          schema: z.object({
+          schema: upload_meta_schema.extend({
             file: z.any().openapi({ type: 'string', format: 'binary' }),
-            entity_type: z.string().optional(),
-            entity_id: z.string().optional(),
           }),
         },
       },
